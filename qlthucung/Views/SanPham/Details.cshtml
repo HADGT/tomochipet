@@ -1,0 +1,184 @@
+﻿@model qlthucung.Models.SanPham
+@{
+    ViewData["Title"] = "Details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+<script src="~/Content/scripts/zoomsl.min.js"></script>
+
+<script>
+
+    //Zoom image Details product
+    jQuery(document).ready(function ($) {
+
+        $('.small-img img').click(function () {
+            var image = $(this).attr('src');
+            $('.big-img img').attr('src', image);
+        });
+
+        $('#zoom').imagezoomsl({
+            zoomrange: [5, 3]
+        });
+
+    });
+
+</script>
+
+<!-- Hiển thị chi tiết sản phẩm -->
+<div class="body" style="padding-top: 30px; margin-top: 50px;">
+    <a class="btn btn-sm btn-primary mt-4" asp-controller="SanPham" asp-action="Index"><i class="fa fa-arrow-circle-left"></i> Trở về mua hàng</a>
+    <a href="javascript:history.back()" class="btn btn-sm btn-primary mt-4">
+        <i class="fa fa-arrow-circle-left"></i> Quay lại
+    </a>
+
+    @if (@TempData["slError"] != null)
+    {
+        <div class="alert alert-danger mt-3" role="alert">
+            @TempData["slError"]
+        </div>
+    }
+
+    @if (@TempData["addSuccess"] != null)
+    {
+        <div class="alert alert-success mt-3" role="alert">
+            @TempData["addSuccess"]
+        </div>
+    }
+    <div class="container">
+        <div class="product__details d-flex">
+            <div class="product__details-img col-lg-4 col-md-4">
+                <div class="big-img">
+                    <img src="@Html.DisplayFor(model => model.Hinh)" alt="" id="zoom" style="visibility: visible;">
+                </div>
+                <div class="small-img d-flex mt-5">
+                    @foreach (var item in ViewBag.getthuvienanh)
+                    {
+                        <img src="@Model.Hinh" onerror="this.onerror=null; this.src='https://i.pinimg.com/originals/ae/4c/9e/ae4c9ea2edf887f6ad1e4e63cfae05b0.jpg'" class="small-imgg" alt="">
+                        <img src="@item.thuvienanh.Img1" onerror="this.onerror=null; this.src='https://i.pinimg.com/originals/ae/4c/9e/ae4c9ea2edf887f6ad1e4e63cfae05b0.jpg'" class="small-imgg" alt="">
+                        <img src="@item.thuvienanh.Img2" onerror="this.onerror=null; this.src='https://i.pinimg.com/originals/ae/4c/9e/ae4c9ea2edf887f6ad1e4e63cfae05b0.jpg'" class="small-imgg" alt="">
+                        <img src="@item.thuvienanh.Img3" onerror="this.onerror=null; this.src='https://i.pinimg.com/originals/ae/4c/9e/ae4c9ea2edf887f6ad1e4e63cfae05b0.jpg'" class="small-imgg" alt="">
+                    }
+                </div>
+            </div>
+
+            <div class="col-lg-8 col-md-8">
+                <h3 style="margin-top: unset; line-height: unset;">@Html.DisplayFor(model => model.Tensp)</h3>
+                <hr />
+                <form class="row d-flex" action="" method="POST" style="justify-content: flex-start; align-items: center; text-align: center; margin: inherit; padding-inline: 10%;">
+                    <div class="number">
+                        <span>
+                            Số lượng tồn:
+                            <span class="number__count">
+                                @Html.DisplayFor(model => model.Soluongton)
+                            </span>
+                        </span>
+                    </div>
+                    @if (Model.Soluongton == 0)
+                    {
+                        <div class="product__cart">
+                            <div class="product__cart-add" style="background: unset;">Tạm hết hàng</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="number d-flex">
+                            <div class="d-flex">
+                                Số lượng:
+                                <div class="spacer" style="margin-inline:10px;"></div>
+                            </div>
+                            <div class="number__count pl-2">
+                                <input type="number" name="soluong" value="0" min="0"
+                                       class="list-group m-0 p-0 text-center w-25">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; white-space: nowrap;">
+                            <div class="row d-flex" style="flex-wrap: nowrap; justify-content: flex-end; align-items: center; text-align: right; padding-block: 20px;">
+                                <div class="product__pride">
+                                    @if (Model.Giamgia == 0 || Model.Giamgia == null)
+                                    {
+                                        <div class="product__pride-newPride" style="font-size: 40px; text-align: start;">
+                                            <span class="Price">
+                                                <bdi>
+                                                    @string.Format("{0:N0}", Model.Giakhuyenmai)
+                                                    <span class="currencySymbol">₫</span>
+                                                </bdi>
+                                            </span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="product__pride-oldPride" style="font-size: 20px; text-align: start;">
+                                            <span class="Price">
+                                                <bdi>
+                                                    @string.Format("{0:N0}", Model.Giaban)
+                                                    <span class="currencySymbol">₫</span>
+                                                </bdi>
+                                            </span>
+                                        </div>
+                                        <div class="product__pride-newPride" style="font-size: 30px; text-align: start;">
+                                            <span class="Price">
+                                                <bdi>
+                                                    @string.Format("{0:N0}", Model.Giakhuyenmai)
+                                                    <span class="currencySymbol">₫</span>
+                                                </bdi>
+                                            </span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="product__cart">
+                                <button type="submit" class="product__cart-add btn btn-sm btn-primary mt-4 p-4" asp-controller="cart" asp-action="addtocart" asp-route-id="@Model.Masp">Thêm vào giỏ hàng</button>
+                            </div>
+                        </div>
+                    }
+                </form>
+            </div>
+        </div>
+
+        <!--Mô tả sản phẩm-->
+        <div class="d-flex justify-content-between pb-3">
+            <h2>MÔ TẢ SẢN PHẨM </h2>
+        </div>
+        <article style="text-align: justify; padding: 0;">
+            @Html.Raw(Model.Mota)
+        </article>
+
+        <hr />
+
+        <!-- Sản phẩm ngẫu nhiên -->
+        <div class="pt-5 pb-3 text-center">
+            <h2 class="mb-1 mt-1 no-border">SẢN PHẨM NGẪU NHIÊN</h2>
+        </div>
+        <div class="row">
+            @foreach (var item in ViewBag.getSPRanDom)
+            {
+                <div class="col-lg-2_5 col-md-4 col-6 post2">
+                    <a asp-controller="SanPham" asp-action="Details" asp-route-id="@item.Masp">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="position-relative">
+                                <div class="product__img">
+                                    <img src="@item.Hinh" alt="">
+                                </div>
+                                <span class="badge bg-danger position-absolute top-0 end-0 m-2">
+                                    @(item.Giamgia > 0 ? item.Giamgia + "%" : "Mới")
+                                </span>
+                            </div>
+                            <div class="product__content p-2">
+                                <div class="product__title fw-bold">
+                                    @item.Tensp
+                                </div>
+                                @if (item.Giamgia > 0)
+                                {
+                                    <small class="text-muted"><s>@string.Format("{0:N0}", item.Giaban) ₫</s></small>
+                                }
+                                <div class="fw-bold text-danger">@string.Format("{0:N0}", item.Giakhuyenmai) ₫</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+
+        </div>
+    </div>
+</div>
+<!-- End Hiển thị chi tiết sản phẩm -->

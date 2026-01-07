@@ -1,0 +1,334 @@
+﻿@model IEnumerable<qlthucung.Models.SanPham>
+@{
+    ViewData["Title"] = "Cart";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .cart__body {
+        width: 90%;
+    }
+
+    .body {
+        width: 90%;
+    }
+
+    .cart-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid #d2b89c;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+        .cart-table th, .cart-table td {
+            border-bottom: 1px solid #d2b89c;
+            padding: 12px 15px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .cart-table th {
+            background-color: #8B5E3C;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .cart-table img {
+            border-radius: 8px;
+        }
+
+    .total-row td {
+        background-color: #f5e6d5;
+        font-weight: bold;
+    }
+
+    .text-danger {
+        color: #c0392b;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+</style>
+
+<div class="cr_body scroll-inner" style="margin-top: 50px;" id="cart-table-container">
+    <table class="table cart-table">
+        @if (ViewBag.cart == null)
+        {
+            <tr>
+                <td colspan="7" class="text-center p-3"><h3>Giỏ hàng trống</h3></td>
+            </tr>
+        }
+        else
+        {
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Tên sp</th>
+                    <th>Hình</th>
+                    <th>Đơn giá</th>
+                    <th>Số lượng</th>
+                    <th>Tổng tiền</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in ViewBag.cart)
+                {
+                    <tr>
+                        <td>@item.Product.Masp</td>
+                        <td>@item.Product.Tensp</td>
+                        <td><img src="@item.Product.Hinh" width="60" class="rounded" /></td>
+                        <td>@string.Format("{0:N0}", item.Product.Giakhuyenmai) ₫</td>
+                        <td>@item.Quantity</td>
+                        <td>@string.Format("{0:N0}", item.Product.Giakhuyenmai * item.Quantity) ₫</td>
+                        <td><a class="text-danger" asp-controller="cart" asp-action="remove" asp-route-id="@item.Product.Masp">Xóa</a></td>
+                    </tr>
+                }
+                <tr class="total-row text-danger">
+                    <td align="right" colspan="6"><b>Tổng tiền thanh toán</b></td>
+                    <td class="total-price">
+                        <b>@string.Format("{0:N0}", @ViewBag.total) ₫</b>
+                    </td>
+                </tr>
+            </tbody>
+        }
+    </table>
+</div>
+
+<div class="cart__body">
+    <form method="POST" asp-controller="Cart" asp-action="Index" id="getinfo_form">
+        @Html.AntiForgeryToken()
+        <div class="row pb-5">
+            <div class="col-lg-6 cart__items-box text-left">
+                <a class="btn btn-sm btn-primary" asp-controller="SanPham" asp-action="index">Tiếp tục mua sắm</a>
+                @if (ViewBag.cart == null)
+                {
+                    <div class="emptyCart text-center">
+                        <img height="30%" src="~/Content/images/empty_cart.png" alt="#">
+                    </div>
+                }
+                else
+                {
+                    <div class="cart__items">
+                        <div class="row pb-5">
+                            @foreach (var item in ViewBag.cart)
+                            {
+                                <div class="col-sm-3 col-5 mt-2">
+                                    <img src="@item.Product.Hinh" alt="" class="cart__items-img">
+                                </div>
+                                <div class="col-sm-9 col-7 mt-2">
+                                    <h3>
+                                        @item.Product.Tensp
+                                    </h3>
+
+                                    <br>
+                                    <div class="cart__items-pride">
+                                        <div class="product__pride-newPride">
+                                            <span class="Price">
+                                                <bdi class="item-total">
+                                                    @string.Format("{0:N0}", item.Product.Giakhuyenmai * item.Quantity)&nbsp;
+                                                    <span class="currencySymbol">₫</span>
+                                                </bdi>
+                                            </span>
+                                        </div>
+
+                                        <div class="cart__items-count">
+                                            Số lượng:
+                                            <div class="spacer" style="margin-inline:10px;"></div>
+                                            <!-- Trong mỗi input số lượng -->
+                                            <input type="number" name="quantity_@item.Product.Masp" value="@item.Quantity" min="1" class="quantity-input w-25">
+                                        </div>
+
+                                    </div>
+                                    <a class="btn btn-sm btn-danger text-white" asp-controller="cart" asp-action="remove" asp-route-id="@item.Product.Masp">Xóa sản phẩm</a>
+                                </div>
+                            }
+                        </div>
+
+
+                    </div>
+
+                }
+
+            </div>
+
+            <div class="col-lg-5" style="padding-left: 20px; padding-right: 10px;">
+                <div>
+                    <div class="cart__info pb-5">
+                        <div class="pt-2 pb-2">
+                            <h2>Địa chỉ nhận hàng</h2>
+                        </div>
+                        <center>
+                            <div class="cart__info-form">
+                                <input type="text" placeholder="Họ và tên" name="FullName" value="@ViewBag.fullName">
+                                <input type="text" placeholder="Số điện thoại" name="Username" value="@ViewBag.username">
+                                <input type="email" placeholder="Email" name="Email" value="@ViewBag.email">
+                                <input type="text" placeholder="Số điện thoại" name="PhoneNumber" value="@ViewBag.phoneNumber">
+                                <input type="hidden" name="BirthDate" value="@ViewBag.birthDate">
+                                <div class="address">
+                                    <h6>Tỉnh / Thành Phố</h6>
+                                    <select name="Tinh" required>
+                                        <option value="">Tỉnh/Tp</option>
+                                    </select>
+                                </div>
+
+                                <div class="address">
+                                    <h6>Quận / Huyện</h6>
+                                    <select name="Xa" required>
+                                        <option value="">Quận/Huyện</option>
+                                    </select>
+                                </div>
+
+                                <input class="billing_address_1" name="tinh" type="hidden" value="">
+                                <input class="billing_address_2" name="xa" type="hidden" value="">
+
+                                <div class="address">
+                                    <h6>Số nhà: </h6>
+                                    <input type="text" name="SoNha" id="">
+                                </div>
+                            </div>
+                        </center>
+                        <br>
+                        <br>
+                        <div class="phuongthuctt">
+                            <h2>Phương thức thanh toán</h2>
+                        </div>
+
+                        <div class="phuongthuctt">
+                            <input type="radio" id="vnpay" name="paymentMethod" required value="vnpay">
+                            <label for="vnpay">Thanh toán qua VnPay</label>
+                            <br>
+                            <input type="radio" id="cod" name="paymentMethod" required value="cod">
+                            <label for="cod">Trả tiền khi nhận hàng</label>
+                        </div>
+
+                        <div class="total">
+                            <h2 class="m-0" style="font-weight: 600; margin-top: -5px;">Tổng thanh toán</h2>
+                            <br>
+
+                            <div class="product__pride-newPride text-danger" style="font-size: 25px;">
+                                <h3 class="Price">
+                                    <bdi class="d-flex justify-content-around total-price">
+                                        @if (ViewBag.total != null)
+                                        {
+                                            <b>@string.Format("{0:N0}", ViewBag.total)</b>
+                                        }
+                                        &nbsp;
+                                        <h3 class="currencySymbol">₫</h3>
+                                    </bdi>
+                                </h3>
+                            </div>
+                        </div>
+                        <center><button class="buy btn btn-sm btn-primary" name="order" id="order" type="submit">Đặt hàng</button></center>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/gh/vietblogdao/js/districts.min.js"></script>
+<script>
+    //<![CDATA[
+    if (address_2 = localStorage.getItem('address_2_saved')) {
+        $('select[name="Xa"] option').each(function () {
+            if ($(this).text() == address_2) {
+                $(this).attr('selected', '')
+            }
+        })
+        $('input.billing_address_2').attr('value', address_2)
+    }
+    if (district = localStorage.getItem('district')) {
+        $('select[name="Xa"]').html(district)
+        $('select[name="Xa"]').on('change', function () {
+            var target = $(this).children('option:selected')
+            target.attr('selected', '')
+            $('select[name="Xa"] option').not(target).removeAttr('selected')
+            address_2 = target.text()
+            $('input.billing_address_2').attr('value', address_2)
+            district = $('select[name="Xa"]').html()
+            localStorage.setItem('district', district)
+            localStorage.setItem('address_2_saved', address_2)
+        })
+    }
+    $('select[name="Tinh"]').each(function () {
+        var $this = $(this),
+            stc = ''
+        c.forEach(function (i, e) {
+            e += +1
+            stc += '<option value=' + e + '>' + i + '</option>'
+            $this.html('<option value="">Tỉnh / Thành phố</option>' + stc)
+            if (address_1 = localStorage.getItem('address_1_saved')) {
+                $('select[name="Tinh"] option').each(function () {
+                    if ($(this).text() == address_1) {
+                        $(this).attr('selected', '')
+                    }
+                })
+                $('input.billing_address_1').attr('value', address_1)
+            }
+            $this.on('change', function (i) {
+                i = $this.children('option:selected').index() - 1
+                var str = '',
+                    r = $this.val()
+                if (r != '') {
+                    arr[i].forEach(function (el) {
+                        str += '<option value="' + el + '">' + el + '</option>'
+                        $('select[name="Xa"]').html('<option value="">Quận / Huyện</option>' + str)
+                    })
+                    var address_1 = $this.children('option:selected').text()
+                    var district = $('select[name="Xa"]').html()
+                    localStorage.setItem('address_1_saved', address_1)
+                    localStorage.setItem('district', district)
+                    $('select[name="Xa"]').on('change', function () {
+                        var target = $(this).children('option:selected')
+                        target.attr('selected', '')
+                        $('select[name="Xa"] option').not(target).removeAttr('selected')
+                        var address_2 = target.text()
+                        $('input.billing_address_2').attr('value', address_2)
+                        district = $('select[name="Xa"]').html()
+                        localStorage.setItem('district', district)
+                        localStorage.setItem('address_2_saved', address_2)
+                    })
+                } else {
+                    $('select[name="Xa"]').html('<option value="">Quận / Huyện</option>')
+                    district = $('select[name="Xa"]').html()
+                    localStorage.setItem('district', district)
+                    localStorage.removeItem('address_1_saved', address_1)
+                }
+            })
+        })
+    });
+</script>
+    <script>
+        $(document).ready(function () {
+            $('.quantity-input').on('change', function () {
+                let input = $(this);
+                let productId = input.attr('name').split('_')[1];
+                let quantity = parseInt(input.val());
+
+                if (quantity < 1) quantity = 1;
+                input.val(quantity);
+
+                $.ajax({
+                    url: '/Cart/UpdateQuantity',
+                    type: 'POST',
+                    data: { id: productId, quantity: quantity },
+                    success: function (res) {
+                        // Cập nhật giá của sản phẩm
+                        input.closest('.cart__items-pride').find('.item-total').text(res.itemTotal.toLocaleString() + ' ₫');
+
+                        // Cập nhật tổng tiền giỏ hàng
+                        $('.total-price').text(res.total.toLocaleString() + ' ₫');
+
+                        location.reload();
+                    },
+                    error: function () {
+                        alert('Cập nhật thất bại, vui lòng thử lại.');
+                    }
+                });
+            });
+        });
+    </script>
+}

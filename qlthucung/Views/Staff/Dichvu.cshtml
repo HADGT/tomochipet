@@ -1,0 +1,134 @@
+﻿@model PaginatedList<DichVu>
+@{
+    ViewData["Title"] = "Quản lý đặt dịch vụ";
+    Layout = "~/Views/Shared/_StaffLayout.cshtml";
+}
+
+<div class="body fix-width scroll-inner p-4">
+    <h2 class="text-center mb-4 text-primary fw-bold">QUẢN LÝ ĐẶT LỊCH DỊCH VỤ</h2>
+
+    <!-- Form tìm kiếm -->
+    <form asp-action="Dichvu" method="get" class="row g-3 align-items-end bg-light p-3 rounded shadow-sm mb-4">
+        <div class="col-md-5">
+            <label for="searchTerm" class="form-label fw-semibold">🔍 Tìm kiếm</label>
+            <input type="text" name="searchTerm" class="form-control"
+                   value="@ViewBag.SearchTerm" placeholder="Nhập tên khách hàng hoặc dịch vụ..." />
+        </div>
+        <div class="col-md-4">
+            <label for="ngaydat" class="form-label fw-semibold">📅 Ngày đặt</label>
+            <input type="date" name="ngaydat" class="form-control" value="@ViewBag.NgayDat" />
+        </div>
+        <div class="col-md-3 text-end">
+            <button type="submit" class="btn btn-primary px-4 mt-2">
+                <i class="bi bi-search"></i> Tìm kiếm
+            </button>
+        </div>
+    </form>
+
+    <!-- Bảng danh sách -->
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle mb-3">
+            <thead class="table-primary text-center">
+                <tr>
+                    <th>Họ Tên</th>
+                    <th>Email</th>
+                    <th>Số điện thoại</th>
+                    <th>Địa chỉ</th>
+                    <th>Trạng thái</th>
+                    <th>Tên dịch vụ</th>
+                    <th>Ngày đặt</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="text-center">
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Hoten</td>
+                        <td>@item.Email</td>
+                        <td>@item.Sdt</td>
+                        <td>@item.Diachi</td>
+                        <td>
+                            @if (ViewBag.EditId != null && ViewBag.EditId == item.Iddichvu)
+                            {
+                                <form asp-action="CapNhatTrangThai" asp-controller="Staff" method="post" class="d-flex flex-column align-items-center">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Iddichvu" />
+                                    <select name="trangthai" class="form-control form-control-sm">
+                                        <option value="Chờ xử lý" selected="@("Chờ xử lý" == item.Trangthai)">Chờ xử lý</option>
+                                        <option value="Đang xử lý" selected="@("Đang xử lý" == item.Trangthai)">Đang xử lý</option>
+                                        <option value="Hoàn thành" selected="@("Hoàn thành" == item.Trangthai)">Hoàn thành</option>
+                                        <option value="Đã hủy" selected="@("Đã hủy" == item.Trangthai)">Đã hủy</option>
+                                        <option value="Đóng" selected="@("Đóng" == item.Trangthai)">Đóng</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-success btn-sm px-3">Lưu</button>
+                                </form>
+                            }
+                            else
+                            {
+                                string badgeClass = item.Trangthai switch
+                                {
+                                    "Chờ xử lý" => "badge bg-warning text-dark",
+                                    "Đang xử lý" => "badge bg-info text-dark",
+                                    "Hoàn thành" => "badge bg-success",
+                                    "Đã hủy" => "badge bg-danger",
+                                    _ => "badge bg-secondary"
+                                };
+                                <span class="@badgeClass px-3 py-2">@item.Trangthai</span>
+                            }
+                        </td>
+                        <td>@item.Tendichvu</td>
+                        <td>@item.Ngaydat.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @if (item.Trangthai != "Đã hủy" && item.Trangthai != "Hoàn thành")
+                            {
+                                <a asp-action="EditTrangThaiDichvu" asp-controller="Staff"
+                                   asp-route-id="@item.Iddichvu"
+                                   class="btn btn-warning btn-sm text-white">
+                                    <i class="bi bi-pencil-square"></i> Sửa
+                                </a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phân trang -->
+    <ul class="pagination justify-content-center mt-4">
+        @if (Model.HasPreviousPage)
+        {
+            <li class="page-item">
+                <a class="page-link" href="@Url.Action("Dichvu", new { pageNumber = Model.PageIndex - 1, searchTerm = ViewBag.SearchTerm, ngaydat = ViewBag.NgayDat })">
+                    ‹ Trước
+                </a>
+            </li>
+        }
+        @for (int i = 1; i <= Model.TotalPages; i++)
+        {
+            <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                <a class="page-link" href="@Url.Action("Dichvu", new { pageNumber = i, searchTerm = ViewBag.SearchTerm, ngaydat = ViewBag.NgayDat })">@i</a>
+            </li>
+        }
+        @if (Model.HasNextPage)
+        {
+            <li class="page-item">
+                <a class="page-link" href="@Url.Action("Dichvu", new { pageNumber = Model.PageIndex + 1, searchTerm = ViewBag.SearchTerm, ngaydat = ViewBag.NgayDat })">
+                    Sau ›
+                </a>
+            </li>
+        }
+    </ul>
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #fff8e1;
+        transition: 0.3s;
+    }
+
+    .form-label {
+        color: #333;
+    }
+</style>

@@ -1,0 +1,109 @@
+﻿@model qlthucung.Models.MoMoPayment
+@{
+    ViewData["Title"] = "PaymentCallbackVnpay";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    :root {
+        --mainColor: #8B5E3C; /* nâu chính */
+        --secondaryColor: #DCC7AA; /* nâu nhạt */
+        --textDark: #4B2E05;
+        --bgLight: #FFFDF9;
+    }
+
+    body {
+        background-color: var(--bgLight);
+    }
+
+    .cart__body {
+        background-color: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        max-width: 850px;
+        margin: 60px auto;
+        padding: 40px 50px;
+        font-family: "Segoe UI", sans-serif;
+        color: var(--textDark);
+    }
+
+    h1 {
+        color: var(--mainColor);
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .row div {
+        font-size: 17px;
+        margin-bottom: 10px;
+    }
+
+    b {
+        color: var(--mainColor);
+    }
+
+    .product__cart {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .product__cart-add {
+        padding: 14px 35px;
+        background-color: var(--mainColor);
+        color: #fff;
+        border-radius: 50px;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+        .product__cart-add:hover {
+            background-color: var(--secondaryColor);
+            color: var(--textDark);
+            transform: scale(1.05);
+        }
+
+    .cart__body div:not(.product__cart) {
+        background-color: var(--bgLight);
+        padding: 10px 15px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        border-left: 4px solid var(--mainColor);
+    }
+</style>
+
+<div class="cart__body">
+    <div class="row pb-5 pt-3 px-3 text-start">
+        <h1>VNPAY thông báo: <br> @ViewBag.Trangthai với đơn hàng số @ViewBag.madon</h1>
+
+        <div>
+            <b>Order ID:</b> @Model.Magiaodich
+        </div>
+        <div>
+            <b>Thông tin đơn hàng:</b> @Model.Tinnhantrave
+        </div>
+        <div>
+            <b>Mã đơn thanh toán:</b> @Model.Madon
+        </div>
+        <div>
+            <b>Trạng thái thanh toán:</b> @Model.Trangthaithanhtoan
+        </div>
+        <div>
+            <b>Ngày thanh toán:</b> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")
+        </div>
+        <div>
+            <b>Số tiền:</b> @String.Format("{0:N0} VNĐ", @Model.Amount)
+        </div>
+
+        <div class="product__cart">
+            <button class="product__cart-add" asp-action="Details" asp-controller="DonHangs">
+                Lịch sử đơn hàng đã đặt
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,170 @@
+﻿@model Register
+
+@{
+    ViewData["Title"] = "Đăng ký";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link href="~/Content/cssSecurity/style.css" rel="stylesheet" />
+<link href="~/Content/cssSecurity/style1.css" rel="stylesheet" />
+
+<style>
+    body {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: "Inter", "Segoe UI", sans-serif;
+        font-size: 15px;
+    }
+
+    .header, footer, .go-to-top {
+        display: none;
+    }
+
+    .register-container {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        padding: 2.5rem 2rem;
+        width: 100%;
+        max-width: 420px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .register-container:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+        }
+
+    .register-title {
+        font-weight: 700;
+        color: #222;
+        font-size: 1.4rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #444;
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        padding: 9px 11px;
+        font-size: 0.9rem;
+        border: 1px solid #ccc;
+        transition: all 0.25s ease;
+    }
+
+        .form-control:focus {
+            border-color: #a29bfe;
+            box-shadow: 0 0 5px rgba(162, 155, 254, 0.4);
+        }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #a29bfe 0%, #81ecec 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        width: 100%;
+        padding: 10px 0;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #6c5ce7 0%, #00cec9 100%);
+            transform: translateY(-2px);
+        }
+
+    .text-link {
+        color: #0984e3;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s ease;
+    }
+
+        .text-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+    .login-text {
+        font-size: 0.88rem;
+        color: #555;
+        font-weight: 400;
+    }
+
+    .alert-danger {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+</style>
+
+<div class="register-container">
+    <form asp-controller="Security" asp-action="Register" method="post" id="form-register">
+        @if (TempData["RegisterErr"] != null)
+        {
+            <div class="alert alert-danger">@TempData["RegisterErr"]</div>
+        }
+
+        <h3 class="register-title">📝 Đăng ký tài khoản</h3>
+
+        <div class="form-group">
+            <label for="FullName" class="form-label">Họ và tên</label>
+            <input asp-for="FullName" class="form-control" placeholder="Nhập họ và tên" required />
+            <span asp-validation-for="FullName" class="text-danger small"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="UserName" class="form-label">Tên đăng nhập</label>
+            <input asp-for="UserName" class="form-control" placeholder="Nhập tên đăng nhập" required />
+            <span asp-validation-for="UserName" class="text-danger small"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="Email" class="form-label">Email</label>
+            <input asp-for="Email" type="email" class="form-control" placeholder="Nhập email" required />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="BirthDate" class="form-label">Ngày sinh</label>
+            <input asp-for="BirthDate" type="date" class="form-control" />
+            <span asp-validation-for="BirthDate" class="text-danger small"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="Password" class="form-label">Mật khẩu</label>
+            <input asp-for="Password" type="password" class="form-control" placeholder="Nhập mật khẩu" required />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="ConfirmPassword" class="form-label">Xác nhận mật khẩu</label>
+            <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Nhập lại mật khẩu" required />
+            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+        </div>
+
+        <button type="submit" class="btn-submit mt-2">Đăng ký</button>
+
+        <div class="text-center mt-3">
+            <span class="login-text">Đã có tài khoản?</span>
+            <a asp-controller="Security" asp-action="SignIn" class="text-link ms-1">Đăng nhập ngay</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

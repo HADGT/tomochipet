@@ -1,0 +1,66 @@
+﻿@model PaginatedList<MoMoPayment>
+@{
+    ViewData["Title"] = "QLGiaoDich";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+<h2>Quản lý giao dịch VNPAY</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Đơn hàng</th>
+            <th>Số tiền</th>
+            <th>Trạng thái thanh toán</th>
+            <th>Ngày tạo</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Madon</td>
+                <td>@item.Amount.ToString("N0") đ</td>
+                <td>@item.Trangthaithanhtoan</td>
+                <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                <td>
+                    <a asp-action="DetailsGD" asp-route-id="@item.PaymentId">Chi tiết</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@{
+    int maxPagesToShow = 5; // Số trang tối đa hiển thị
+    int startPage = Math.Max(1, Model.PageIndex - maxPagesToShow);
+    int endPage = Math.Min(Model.TotalPages, Model.PageIndex + maxPagesToShow);
+}
+<ul class="pagination justify-content-center" style="margin: 10px auto;">
+    @if (Model.HasPreviousPage)
+    {
+        <li class="page-item">
+            <a class="page-link" href="@Url.Action("QLGiaoDich", new { pageNumber = Model.PageIndex - 1 })">Previous</a>
+        </li>
+    }
+
+    @for (int i = startPage; i <= endPage; i++)
+    {
+        if (i == Model.PageIndex)
+        {
+            <li class="page-item active"><a class="page-link">@i</a></li>
+        }
+        else
+        {
+            <li class="page-item">
+                <a class="page-link" href="@Url.Action("QLGiaoDich", new { pageNumber = i })">@i</a>
+            </li>
+        }
+    }
+
+    @if (Model.HasNextPage)
+    {
+        <li class="page-item">
+            <a class="page-link" href="@Url.Action("QLGiaoDich", new { pageNumber = Model.PageIndex + 1 })">Next</a>
+        </li>
+    }
+</ul>

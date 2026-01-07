@@ -1,0 +1,211 @@
+﻿@using Microsoft.AspNetCore.Http
+@{
+    ViewData["Title"] = "Chat Box";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var userId = Context.Session.GetString("userId");
+    var userName = Context.Session.GetString("username");
+}
+
+<h2 class="pb-3 pt-3">Chat Box</h2>
+
+<style>
+    h2 {
+        color: coral;
+        padding-inline: 10px;
+        text-align: center;
+    }
+
+    .btn-primary {
+        --bs-btn-color: #000;
+        --bs-btn-bg: #fd7e14;
+        --bs-btn-border-color: #fd7e14;
+        --bs-btn-hover-color: #000;
+        --bs-btn-hover-bg: #fd7e14;
+        --bs-btn-hover-border-color: #fd7e14;
+        --bs-btn-focus-shadow-rgb: 255, 208, 38;
+        --bs-btn-active-color: #000;
+        --bs-btn-active-bg: #fd7e14;
+        --bs-btn-active-border-color: #fd7e14;
+        --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+        --bs-btn-disabled-color: #000;
+        --bs-btn-disabled-bg: #fd7e14;
+        --bs-btn-disabled-border-color: #fd7e14;
+    }
+
+        .btn-primary:hover {
+            color: #fff;
+            background-color: coral;
+            border-color: antiquewhite;
+        }
+
+    .chat-message {
+        margin-bottom: 8px;
+    }
+
+    .text-secondary {
+        color: coral !important;
+    }
+
+    .card-header {
+        text-align: center;
+        color: #554d4d;
+        background: #ff7f507a;
+    }
+</style>
+
+<div id="chatBox" class="card">
+    <div class="card-header">
+        <strong>Hỗ trợ khách hàng</strong>
+    </div>
+    <div class="card-body overflow-auto" id="chatMessages" style="height: 481px;"></div>
+    <div class="card-footer">
+        <textarea id="messageInput" class="form-control" placeholder="Nhập tin nhắn"
+                  rows="1" style="font-size: 14px; resize: none; overflow: hidden;"></textarea>
+        <button id="sendButton" class="btn btn-sm btn-primary mt-2 w-100" onclick="sendMessage()" disabled>Gửi</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.17/signalr.min.js"></script>
+<script>
+    const guestId = "@userId";
+    sessionStorage.setItem("User", guestId);
+    let adminId = sessionStorage.getItem("admin");
+    console.log("adminId" + adminId);
+    console.log("guestId" + guestId);
+    const connection = new signalR.HubConnectionBuilder().withUrl("/ChatHub?userId=" + guestId).withAutomaticReconnect() // tự động kết nối lại
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+    if (!guestId || guestId === "null") {
+        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        window.location.href = "/Security/SignIn";
+    }
+
+    function escapeHtml(unsafe) {
+        return unsafe.replace(/[&<"'>]/g, function (m) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[m];
+        });
+    }
+
+    // Lắng nghe trạng thái reconnect
+    connection.onreconnecting(error => {
+        console.warn("Mất kết nối, đang thử kết nối lại...", error);
+    });
+
+    connection.onreconnected(connectionId => {
+        console.log("Đã kết nối lại, connectionId:", connectionId);
+    });
+
+    connection.onclose(error => {
+        console.error("Kết nối bị đóng:", error);
+    });
+
+    connection.on("LoadMessageHistory", function (messages) {
+        const msgBox = document.getElementById("chatMessages");
+        msgBox.innerHTML = '';
+        messages.forEach(msg => {
+            console.log("message-history-user " + msg);
+            const isMine = msg.senderId === guestId;
+            const msgClass = isMine ? 'text-end text-primary' : 'text-start text-secondary';
+            const senderLabel = isMine ? '' : 'Hỗ trợ: ';
+            const safeContent = escapeHtml(msg.content);
+            msgBox.innerHTML += `<div class="${msgClass} chat-message"><strong>${senderLabel}</strong>${safeContent}</div>`;
+        });
+        msgBox.scrollTop = msgBox.scrollHeight;
+    });
+
+    connection.on("ReceiveMessage", function (sender, message) {
+        const msgBox = document.getElementById("chatMessages");
+        const isMine = sender === guestId;
+        const msgClass = isMine ? 'text-end text-primary' : 'text-start text-secondary';
+        const safeContent = escapeHtml(message);
+        if (sender === adminId) {
+            msgBox.innerHTML += `<div class="text-start text-secondary chat-message"><strong>Hỗ trợ:</strong> ${safeContent}</div>`;
+        } else {
+            msgBox.innerHTML += `<div class="${msgClass} chat-message">${safeContent}</div>`;
+        }
+        msgBox.scrollTop = msgBox.scrollHeight;
+        console.log("message-receive-user " + safeContent);
+    });
+
+    connection.start().then(() => {
+        console.log("Kết nối thành công với ChatHub");
+    }).catch(err => {
+            console.error("Không thể kết nối:", err);
+        alert("Không thể kết nối đến máy chủ hỗ trợ. Vui lòng thử lại sau.");
+        });
+
+    async function loadMessages() {
+        try {
+            const response = await fetch(`/get-messages?userId=${guestId}`);
+            const messages = await response.json();
+            const msgBox = document.getElementById("chatMessages");
+            msgBox.innerHTML = '';
+
+            messages.forEach(msg => {
+                console.log("load-message-user " + msg);
+                const isMine = msg.senderId === guestId;
+                const senderLabel = isMine ? "" : "Hỗ trợ: ";
+                const msgClass = isMine ? 'text-end text-primary' : 'text-start text-secondary';
+                const safeContent = escapeHtml(msg.content);
+                msgBox.innerHTML += `<div class="${msgClass} chat-message"><strong>${senderLabel}</strong>${safeContent}</div>`;
+                if (!adminId && !isMine) adminId = msg.senderId;
+            });
+
+            msgBox.scrollTop = msgBox.scrollHeight;
+        } catch (err) {
+            console.error("Lỗi khi tải tin nhắn:", err);
+        }
+    }
+
+    function sendMessage() {
+        const msgInput = document.getElementById("messageInput");
+        const msg = msgInput.value.trim();
+        if (!msg) return;
+        console.log("send-message-user " + msg);
+        if (connection.state !== signalR.HubConnectionState.Connected) {
+            console.warn("⚠️ Chưa kết nối, không thể gửi tin:", msg);
+            return;
+        }
+        try {
+        connection.invoke("SendMessage", guestId, adminId, msg).catch(err => console.error(err));
+
+        // const msgBox = document.getElementById("chatMessages");
+        // const safeContent = escapeHtml(msg);
+        // msgBox.innerHTML += `<div class="text-end text-primary chat-message">${safeContent}</div>`;
+        // msgBox.scrollTop = msgBox.scrollHeight;
+
+        msgInput.value = '';
+        } catch (err) {
+            console.error("❌ Lỗi gửi tin:", err);
+        }
+    }
+
+    window.onload = function () {
+        loadMessages();
+
+        const msgInput = document.getElementById("messageInput");
+        const sendBtn = document.getElementById("sendButton");
+
+        msgInput.focus();
+
+        msgInput.addEventListener("input", function () {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + "px";
+            sendBtn.disabled = this.value.trim() === '';
+        });
+
+        msgInput.addEventListener("keypress", function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    };
+</script>

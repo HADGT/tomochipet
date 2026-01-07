@@ -1,0 +1,50 @@
+﻿@model qlthucung.Models.DichVu
+
+@{
+    ViewData["Title"] = "Cập nhật trạng thái dịch vụ";
+    Layout = "~/Views/Shared/_StaffLayout.cshtml";
+}
+
+<div class="container mt-4">
+    <h3 class="text-center mb-4">Cập nhật trạng thái dịch vụ</h3>
+
+    <div class="card shadow-sm p-4">
+        <form asp-action="CapNhatTrangThai" asp-controller="Staff" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Iddichvu" />
+
+            <div class="form-group mb-3">
+                <label>Họ tên khách hàng:</label>
+                <input type="text" class="form-control" value="@Model.Hoten" readonly />
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Tên dịch vụ:</label>
+                <input type="text" class="form-control" value="@Model.Tendichvu" readonly />
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Ngày đặt:</label>
+                <input type="text" class="form-control"
+                       value="@(Model.Ngaydat.ToString("dd/MM/yyyy"))"
+                       readonly />
+
+            </div>
+
+            <div class="form-group mb-3">
+                <label>Trạng thái hiện tại:</label>
+                <select name="trangthai" class="form-control">
+                    <option value="Chờ xử lý" selected="@("Chờ xử lý" == Model.Trangthai)">Chờ xử lý</option>
+                    <option value="Đang xử lý" selected="@("Đang xử lý" == Model.Trangthai)">Đang xử lý</option>
+                    <option value="Hoàn thành" selected="@("Hoàn thành" == Model.Trangthai)">Hoàn thành</option>
+                    <option value="Đã hủy" selected="@("Đã hủy" == Model.Trangthai)">Đã hủy</option>
+                </select>
+            </div>
+
+            <div class="form-group text-center mt-4">
+                <button type="submit" class="btn btn-success px-4">Lưu thay đổi</button>
+                <a asp-action="Dichvu" asp-controller="Staff" class="btn btn-secondary px-4">Quay lại</a>
+            </div>
+        </form>
+    </div>
+</div>

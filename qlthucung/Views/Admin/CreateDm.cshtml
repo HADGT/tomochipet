@@ -1,0 +1,40 @@
+﻿@model qlthucung.Models.DanhMuc
+
+@{
+    ViewData["Title"] = "CreateDm";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<h1>CreateDm</h1>
+<h4>DanhMuc</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="CreateDanhMucSP" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label asp-for="Tendanhmuc" class="control-label">Tên danh mục</label>
+                <input asp-for="Tendanhmuc" class="form-control" />
+                <span asp-validation-for="Tendanhmuc" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="ParentID" class="control-label">Danh mục cha</label>
+                <select asp-for="ParentID" class="form-control" asp-items="@ViewBag.ShowDropList">
+                    <option value="">--Chọn danh mục--</option>
+                </select>
+                <span asp-validation-for="ParentID" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="ListDanhMucSP">Back to List</a>
+</div>
+

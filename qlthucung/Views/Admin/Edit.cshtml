@@ -1,0 +1,161 @@
+﻿@model qlthucung.Models.SanPham
+
+@{
+    ViewData["Title"] = "Edit";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white text-center py-3">
+            <h4 class="mb-0 text-uppercase fw-bold">Chỉnh sửa sản phẩm</h4>
+        </div>
+
+        <div class="card-body px-4 py-4">
+            <form asp-action="Edit" asp-controller="Admin" method="post" enctype="multipart/form-data">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <input type="hidden" asp-for="Masp" />
+                <input type="hidden" asp-for="Idthuvien" />
+
+                <div class="row g-4">
+                    <!-- Cột trái -->
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="Tensp" class="form-label fw-bold">Tên sản phẩm</label>
+                            <input asp-for="Tensp" class="form-control" placeholder="Nhập tên sản phẩm" />
+                            <span asp-validation-for="Tensp" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Giaban" class="form-label fw-bold">Giá bán (VNĐ)</label>
+                            <input asp-for="Giaban" class="form-control" placeholder="Nhập giá bán" />
+                            <span asp-validation-for="Giaban" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Giamgia" class="form-label fw-bold">Giảm giá (%)</label>
+                            <input asp-for="Giamgia" class="form-control" placeholder="Nhập phần trăm giảm giá" />
+                            <span asp-validation-for="Giamgia" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Soluongton" class="form-label fw-bold">Số lượng tồn</label>
+                            <input asp-for="Soluongton" class="form-control" />
+                            <span asp-validation-for="Soluongton" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="IdDanhmuc" class="form-label fw-bold">Danh mục</label>
+                            <select asp-for="IdDanhmuc" class="form-select" asp-items="@ViewBag.ShowDropList">
+                                <option value="">-- Chọn danh mục --</option>
+                            </select>
+                            <span asp-validation-for="IdDanhmuc" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Ngaycapnhat" class="form-label fw-bold">Ngày cập nhật</label>
+                            <input asp-for="Ngaycapnhat" type="date" class="form-control" />
+                            <span asp-validation-for="Ngaycapnhat" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải -->
+                    <div class="col-md-6">
+                        <div class="form-group mb-3 text-center">
+                            <label asp-for="Hinh" class="form-label fw-bold d-block">Hình ảnh sản phẩm</label>
+                            <img src="@Model.Hinh" id="preImg" class="border rounded mb-2 shadow-sm" width="220" alt="Hình sản phẩm" />
+                            <input asp-for="Hinh" type="file" id="fileInput" onchange="readURL(this);" class="form-control mt-2" accept="image/*" />
+                            <input type="hidden" name="PathHinh" value="@Model.Hinh" id="PathHinh" />
+                            <span asp-validation-for="Hinh" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Mota" class="form-label fw-bold">Mô tả sản phẩm</label>
+                            <textarea asp-for="Mota" class="form-control" rows="6" placeholder="Nhập mô tả chi tiết về sản phẩm..." style="text-transform: none; font-style: none; text-align: none;"></textarea>
+                            <span asp-validation-for="Mota" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-success px-5 me-3">
+                        <i class="bi bi-save"></i> Lưu thay đổi
+                    </button>
+                    <a asp-action="ListDanhMuc" class="btn btn-secondary px-4">
+                        <i class="bi bi-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="~/lib/jquery/dist/jquery.js"></script>
+<script>
+
+    $(function () {
+        $('#fileInput').change(function () {
+            var fileName = $(this).val().split('\\').pop();
+            var pathHinh = '/Content/uploads/' + fileName;
+            $('#PathHinh').val(pathHinh);
+        });
+    });
+
+    function readURL(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+
+            reader.onload = function (e) {
+                $('#preImg').attr('src', e.target.result);
+            };
+
+            reader.readAsDataURL(input.files[0]);
+        }
+    }   
+</script>
+<!-- Place the first <script> tag in your HTML's <head> -->
+<script src="https://cdn.tiny.cloud/1/y778ueabmnorrjq35ir8xpcylsmmf7hlqcmay3ah7r2y5ijh/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
+
+<!-- Place the following <script> and <textarea> tags your HTML's <body> -->
+<script>
+    tinymce.init({
+        selector: 'textarea',
+        height: 300,
+        menubar: false,
+        language: 'vi',
+        plugins: [
+            // Core editing features
+            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+            // Your account includes a free trial of TinyMCE premium features
+            // Try the most popular premium features until Oct 27, 2025:
+            'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'ai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+        ],
+        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+        /* 👇 Cấu hình để ngăn style ngoài ảnh hưởng */
+        content_css: false,           // Không load CSS global của site
+        content_style: `
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    font-size: 16px;
+                    color: #333;
+                    line-height: 1.6;
+                    background-color: #fff;
+                    padding: 10px;
+                }
+                h1, h2, h3, h4, h5, h6 {
+                    color: #222;
+                    font-weight: 600;
+                }
+                p { margin-bottom: 10px; }
+            `,
+        body_class: 'tinymce-content', // (tuỳ chọn) thêm class riêng cho iframe
+        tinycomments_mode: 'embedded',
+        tinycomments_author: 'Author name',
+        mergetags_list: [
+            { value: 'First.Name', title: 'First Name' },
+            { value: 'Email', title: 'Email' },
+        ],
+        ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
+        uploadcare_public_key: 'eb9b785a442a95f9fb520bb515ae4db4bfec365d0e35ed075770c435de515214',
+    });
+</script>

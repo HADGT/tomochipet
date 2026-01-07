@@ -1,0 +1,214 @@
+﻿@using Microsoft.AspNetCore.Http
+
+@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var userId = Context.Session.GetString("userId");
+    var userName = Context.Session.GetString("username");
+}
+<style>
+    #userList li.active {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .text-secondary {
+        color: #000000 !important;
+    }
+</style>
+<h2>Chat box</h2>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar: danh sách người dùng -->
+        <div class="col-3 border-end" style="height: 85vh; overflow-y: auto;">
+            <h5 class="p-3">Khách hàng</h5>
+            <ul id="userList" class="list-group list-group-flush">
+                <!-- Danh sách user sẽ đổ ở đây -->
+            </ul>
+        </div>
+
+        <!-- Khung chat -->
+        <div class="col-9 d-flex flex-column" style="height: 85vh;">
+            <div class="flex-grow-1 overflow-auto p-3" id="chatMessages"></div>
+            <div class="p-3 border-top">
+                <input type="text" id="messageInput" class="form-control" placeholder="Nhập tin..." />
+                <button class="btn btn-primary mt-2 w-100" onclick="sendMessage()">Gửi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.17/signalr.min.js"></script>
+<script>
+    let adminId = '@userId'; // Lấy từ Razor Session
+    sessionStorage.setItem("admin", adminId);
+    let currentUser = sessionStorage.getItem("User");
+    console.log("adminId" + adminId);
+    console.log("guestId" + currentUser);
+    if (!adminId || adminId === "null") {
+        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        window.location.href = "/Security/SignIn";
+    }
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/ChatHub?userId=" + adminId).withAutomaticReconnect() // tự động kết nối lại
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+    // Lắng nghe trạng thái reconnect
+    connection.onreconnecting(error => {
+        console.warn("Mất kết nối, đang thử kết nối lại...", error);
+    });
+
+    connection.onreconnected(connectionId => {
+        console.log("Đã kết nối lại, connectionId:", connectionId);
+    });
+
+    connection.onclose(error => {
+        console.error("Kết nối bị đóng:", error);
+    });
+
+    connection.on("LoadMessageHistory", function (messages) {
+        const msgBox = document.getElementById("chatMessages");
+        msgBox.innerHTML = '';
+        messages.forEach(msg => {
+            console.log("message-history-user " + msg);
+            const isMine = msg.senderId === adminId;
+            const msgClass = isMine ? 'text-end text-primary' : 'text-start text-secondary';
+            const senderLabel = isMine ? '' : 'Khách: ';
+            const safeContent = escapeHtml(msg.content);
+            msgBox.innerHTML += `<div class="${msgClass} chat-message"><strong>${senderLabel}</strong>${safeContent}</div>`;
+        });
+        msgBox.scrollTop = msgBox.scrollHeight;
+    });
+
+    connection.on("ReceiveMessage", function (sender, message) {
+        const msgBox = document.getElementById("chatMessages");
+        if (sender === currentUser) {
+            msgBox.innerHTML += `<div class="text-start text-secondary"><strong>Khách:</strong> ${message}</div>`;
+            msgBox.scrollTop = msgBox.scrollHeight;
+            console.log("message-receive-user " + message);
+        } else {
+            // đánh dấu có tin nhắn mới
+            const li = document.getElementById("user-" + sender);
+            if (li) li.classList.add("fw-bold", "bg-warning");
+            const msgClass = "text-end text-primary";
+            msgBox.innerHTML += `<div class="${msgClass}">${message}</div>`;
+            console.log("message-receive-user-none " + message);
+        }
+    });
+
+    // Cho phép gửi tin khi nhấn Enter
+    document.getElementById("messageInput").addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.altKey) {
+            e.preventDefault(); // chặn xuống dòng
+            sendMessage();
+        }
+        // Alt + Enter => xuống dòng (giữ nguyên behavior mặc định)
+    });
+
+
+    connection.on("NewUserConnected", function (userId) {
+        addUserToList(userId);
+    });
+
+    let isConnected = false;
+
+    connection.start()
+        .then(() => {
+            console.log("Connected to SignalR");
+            isConnected = true;
+        })
+        .catch(err => {
+            console.error("Không thể kết nối:", err);
+        });
+
+    async function loadMessages(userId) {
+        const msgBox = document.getElementById("chatMessages");
+        msgBox.innerHTML = '';
+        try {
+            const response = await fetch(`/get-messages?userId=${adminId}`);
+            const messages = await response.json();
+
+            messages.forEach(msg => {
+                console.log("load-message-user " + msg);
+                const sender = msg.senderId === adminId ? "" : "Khách: ";
+                const msgClass = msg.senderId === adminId ? "text-end text-primary" : "text-start text-secondary";
+                msgBox.innerHTML += `<div class="${msgClass}"><strong>${sender}</strong>${msg.content}</div>`;
+            });
+
+            msgBox.scrollTop = msgBox.scrollHeight;
+        } catch (err) {
+            console.error("Lỗi khi tải tin nhắn:", err);
+        }
+    }
+
+    function sendMessage() {
+        if (!isConnected) {
+            console.warn("Chưa kết nối SignalR, không thể gửi tin nhắn");
+            return;
+        }
+
+        const msgInput = document.getElementById("messageInput");
+        const msg = msgInput.value.trim();
+        console.log("send-message-user " + msg);
+        if (!msg || !currentUser) return;
+        if (connection.state !== signalR.HubConnectionState.Connected) {
+            console.warn("⚠️ Chưa kết nối, không thể gửi tin:", msg);
+            return;
+        }
+        try {
+        connection.invoke("SendMessage", adminId, currentUser, msg)
+            .catch(err => console.error("Lỗi gửi tin:", err));
+
+        // const msgBox = document.getElementById("chatMessages");
+        // msgBox.innerHTML += `<div class="text-end text-primary">${msg}</div>`;
+        // msgBox.scrollTop = msgBox.scrollHeight;
+
+        msgInput.value = '';
+        } catch (err) {
+            console.error("❌ Lỗi gửi tin:", err);
+        }
+    }
+
+
+    function addUserToList(user) {
+        let userId = typeof user === 'string' ? user : user.id;
+        let userName = typeof user === 'string' ? user : user.userName || user.id;
+
+        if (!userId || document.getElementById("user-" + userId)) return;
+
+        const li = document.createElement("li");
+        li.className = "list-group-item";
+        li.id = "user-" + userId;
+        li.style.cursor = "pointer";
+        li.innerText = userName;
+
+        li.onclick = async () => {
+            currentUser = userId;
+            await loadMessages(userId);
+
+            // reset highlight khi click
+            li.classList.remove("fw-bold", "bg-warning");
+            document.querySelectorAll("#userList li").forEach(el => el.classList.remove("active"));
+            li.classList.add("active");
+        };
+
+        document.getElementById("userList").appendChild(li);
+    }
+
+    window.onload = async () => {
+        try {
+            const res = await fetch("http://localhost:5172/AdminChat/GetUserList");
+            const userList = await res.json();
+
+            userList.forEach(user => addUserToList(user));
+            console.log(userList);
+        } catch (e) {
+            console.warn("Không thể tải danh sách khách hàng:", e);
+        }
+    };
+
+</script>
+
+

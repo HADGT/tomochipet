@@ -1,0 +1,97 @@
+﻿@model qlthucung.Models.SanPham
+
+@{
+    ViewData["Title"] = "Create";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container py-4">
+    <h2 class="mb-4">Thêm Sản Phẩm</h2>
+
+    <form asp-action="Create" asp-controller="Admin" enctype="multipart/form-data" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <input type="hidden" asp-for="Idthuvien" />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Tensp" class="form-label">Tên sản phẩm</label>
+                <input asp-for="Tensp" class="form-control" placeholder="Nhập tên sản phẩm" />
+                <span asp-validation-for="Tensp" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="IdDanhmuc" class="form-label">Danh mục</label> <br />
+                <select asp-for="IdDanhmuc" class="form-select" asp-items="@ViewBag.ShowDropList">
+                    <option value="">--Chọn danh mục--</option>
+                </select>
+                <span asp-validation-for="IdDanhmuc" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Giaban" class="form-label">Giá bán</label>
+                <input asp-for="Giaban" type="number" min="0" step="1000" class="form-control" />
+                <span asp-validation-for="Giaban" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Giamgia" class="form-label">Giảm giá (%)</label>
+                <input asp-for="Giamgia" type="number" min="0" max="100" class="form-control" />
+                <span asp-validation-for="Giamgia" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Soluongton" class="form-label">Số lượng tồn</label>
+                <input asp-for="Soluongton" type="number" min="0" class="form-control" />
+                <span asp-validation-for="Soluongton" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Ngaycapnhat" class="form-label">Ngày cập nhật</label>
+                <input asp-for="Ngaycapnhat" type="date" class="form-control" />
+                <span asp-validation-for="Ngaycapnhat" class="text-danger"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Mota" class="form-label">Mô tả</label>
+                <textarea asp-for="Mota" id="Mota" rows="5" class="form-control"></textarea>
+                <span asp-validation-for="Mota" class="text-danger"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Hinh" class="form-label">Hình ảnh</label>
+                <input asp-for="Hinh" type="file" class="form-control" id="image" name="files" multiple />
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex justify-content-between">
+            <a asp-action="ListDanhMuc" class="btn btn-secondary">Quay lại</a>
+            <button type="submit" class="btn btn-primary">Tạo sản phẩm</button>
+        </div>
+    </form>
+</div>
+
+<!-- Place the first <script> tag in your HTML's <head> -->
+<script src="https://cdn.tiny.cloud/1/y778ueabmnorrjq35ir8xpcylsmmf7hlqcmay3ah7r2y5ijh/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
+
+<!-- Place the following <script> and <textarea> tags your HTML's <body> -->
+<script>
+    tinymce.init({
+        selector: 'textarea',
+        plugins: [
+            // Core editing features
+            'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+            // Your account includes a free trial of TinyMCE premium features
+            // Try the most popular premium features until Oct 27, 2025:
+            'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'ai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+        ],
+        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+        tinycomments_mode: 'embedded',
+        tinycomments_author: 'Author name',
+        mergetags_list: [
+            { value: 'First.Name', title: 'First Name' },
+            { value: 'Email', title: 'Email' },
+        ],
+        ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
+        uploadcare_public_key: 'eb9b785a442a95f9fb520bb515ae4db4bfec365d0e35ed075770c435de515214',
+    });
+</script>

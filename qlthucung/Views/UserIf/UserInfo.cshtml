@@ -1,0 +1,73 @@
+﻿@model UserInfoViewModel
+@{
+    ViewData["Title"] = "UserInfo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 90vh;">
+    <div class="card shadow-lg p-4" style="width: 500px; border-radius: 15px;">
+        <h3 class="text-center mb-4">Thông tin người dùng</h3>
+        <table class="table table-borderless">
+            <tr>
+                <th style="width: 40%;">Họ và tên</th>
+                <td>@Model.FullName</td>
+            </tr>
+            <tr>
+                <th>Tên đăng nhập</th>
+                <td>@Model.UserName</td>
+            </tr>
+            <tr>
+                <th>Ngày sinh</th>
+                <td>
+                    @(Model.BirthDate.HasValue
+                        ? Model.BirthDate.Value.ToString("dd/MM/yyyy")
+                        : "")
+                </td>
+            </tr>
+            <tr>
+                <th>Email</th>
+                <td>
+                    @if (string.IsNullOrEmpty(Model.Email))
+                    {
+                        <form method="post" asp-action="UpdateEmail" asp-controller="DichVu" class="d-flex">
+                            <input type="email" name="Email" class="form-control form-control-sm me-2" placeholder="Nhập email..." required />
+                            <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
+                        </form>
+                    }
+                    else
+                    {
+                        @Model.Email
+                    }
+                </td>
+            </tr>
+            <tr>
+                <th>Số điện thoại</th>
+                <td>
+                    @if (string.IsNullOrEmpty(Model.PhoneNumber))
+                    {
+                        <form method="post" asp-action="UpdatePhoneNumber" asp-controller="DichVu" class="d-flex">
+                            <input type="text" name="PhoneNumber" class=" form-control-sm me-2" placeholder="Nhập số điện thoại..." style="font-size: 1 rem; margin: 0px 17px 0px 0px; padding: 8px 12px; border: 1px solid #b3b3b3; border-radius: 3px; outline: 0;" />
+                            <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div>
+                            @Model.PhoneNumber <br />
+                            @if (!Model.PhoneNumberConfirmed)
+                            {
+                                <form method="post" asp-action="ConfirmPhoneNumber" asp-controller="DichVu" class="mt-1">
+                                    <button type="submit" class="btn btn-warning btn-sm">Xác nhận</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <span class="text-success">✔ Đã xác nhận</span>
+                            }
+                        </div>
+                    }
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>

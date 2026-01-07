@@ -1,0 +1,180 @@
+﻿@using Microsoft.AspNetCore.Http
+@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var userId = Context.Session.GetString("userId");
+    var userName = Context.Session.GetString("username");
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+<!-- Hero banner -->
+<div class="hero-banner position-relative text-center">
+    <img src="~/Content/images/background.webp" alt="banner" class="w-100" style="max-height:500px; object-fit:cover;">
+    <div class="hero-text position-absolute top-50 start-50 translate-middle bg-opacity-50 p-4 rounded">
+        <h1 class="fw-bold display-4" style="color:#8B5E3C">ShopPet</h1>
+        <p class="lead" style="color:#8B5E3C">Thế giới thông tin & sản phẩm cho thú cưng</p>
+    </div>
+</div>
+
+<!-- Giới thiệu -->
+<section class="container py-5">
+    <div class="row align-items-center">
+        <div class="col-md-6 mb-3">
+            <h2 class="fw-bold text-uppercase mb-4">Về Shoppet</h2>
+            <p class="text-muted">
+                <b class="text-dark" style="color:#8B5E3C">Shoppet</b> được xây dựng dựa trên tiêu chí là cổng thông tin khổng lồ
+                và hoàn toàn miễn phí về các vấn đề xung quanh thú cưng: bệnh lý, dinh dưỡng, cách chăm sóc
+                và điều trị bệnh...
+            </p>
+            <p class="text-muted">
+                Thông tin được chọn lọc từ nhiều nguồn uy tín, kết hợp với trải nghiệm thực tế để mang đến nội dung
+                chính xác và hữu ích nhất.
+            </p>
+        </div>
+        <div class="col-md-6 text-center">
+            <img src="~/Content/images/Gioithieu.jpg" class="img-fluid rounded-4 shadow" alt="Giới thiệu">
+        </div>
+    </div>
+</section>
+
+<!-- Cam kết -->
+<section class="py-5" style="background:#E6D5C3;">
+    <div class="container text-center">
+        <h2 class="fw-bold mb-4">Cam kết</h2>
+        <h3 class="mb-5">Shoppet cam kết mang lại cho bạn thông tin minh bạch, chính xác và giải pháp tốt nhất.</h3>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <img src="~/Content/images/i1-1.webp" width="48" height="48" class="mb-3" />
+                        <h5 class="fw-bold">Nội dung</h5>
+                        <p class="text-muted">Chính xác, có nguồn uy tín và được chuyên gia thú y xem xét.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <img src="~/Content/images/i2-1.webp" width="48" height="48" class="mb-3" />
+                        <h5 class="fw-bold">Sản phẩm</h5>
+                        <p class="text-muted">Được phân tích & review công bằng, chi tiết, minh bạch.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <img src="~/Content/images/i3-1.webp" width="48" height="48" class="mb-3" />
+                        <h5 class="fw-bold">Hỗ trợ</h5>
+                        <p class="text-muted">Đồng hành, hướng dẫn nguồn khám thú cưng uy tín, tận tâm.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sứ mệnh & Tầm nhìn -->
+<section class="container py-5">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="p-4 border rounded-4 shadow-sm h-100">
+                <h3 class="text-center fw-bold mb-3">Sứ mệnh</h3>
+                <p class="text-muted">
+                    Sứ mệnh của chúng tôi là mang đến cho độc giả thông tin nhanh chóng và chính xác nhất,
+                    giúp giảm thiểu rủi ro do thiếu hiểu biết.
+                </p>
+                <p class="text-muted">
+                    <b style="color:#000">Shoppet</b> cam kết đồng hành cùng những người yêu thú cưng, để các bạn nhỏ bốn chân luôn cảm nhận được tình yêu thương.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="p-4 border rounded-4 shadow-sm h-100">
+                <h3 class="text-center fw-bold mb-3">Tầm nhìn</h3>
+                <p class="text-muted">
+                    <b style="color:#000">Shoppet</b> hướng tới trở thành địa chỉ thông tin đáng tin cậy và người bạn đồng hành thân cận
+                    trong quá trình chăm sóc thú nuôi.
+                </p>
+                <p class="text-muted">
+                    Chúng tôi sẽ không ngừng nỗ lực, phủ rộng thông tin đến mọi miền đất nước.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Liên hệ -->
+<section class="contact-section text-white py-5" style="background:#8B5E3C;" id="Lienhe">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">Liên hệ</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <i class="fas fa-map-marker-alt mb-3" style="color:#8B5E3C; width: 25%;"></i>
+                        <h4>Địa chỉ</h4>
+                        <p class="text-muted">235 Hoàng Quốc Việt, Cổ Nhuế 1, Bắc Từ Liêm, Hà Nội</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <i class="fas fa-envelope mb-3" style="color:#8B5E3C; width: 25%;"></i>
+                        <h4>Email</h4>
+                        <a href="javascript:void(0);" onclick="copyEmail()" class="text-decoration-none text-dark">
+                            duongha782003@gmail.com
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <i class="fas fa-phone mb-3" style="color:#8B5E3C; width: 25%;"></i>
+                        <h4>Phone</h4>
+                        <p class="text-muted">0986 999 999</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div class="mt-5">
+            <h3 class="text-center mb-3">Địa chỉ cửa hàng</h3>
+            <div id="map" style="height:400px; z-index:0;" class="rounded shadow-sm"></div>
+            <div class="text-center mt-3">
+                <a href="https://www.google.com/maps/search/?api=1&query=235+Hoàng+Quốc+Việt,+Cổ+Nhuế+1,+Bắc+Từ+Liêm,+Hà+Nội"
+                   target="_blank" class="btn btn-outline-light">
+                    📍 Xem trên Google Maps
+                </a>
+            </div>
+        </div>
+
+        <!-- Social -->
+        <div class="social d-flex justify-content-center mt-5">
+            <a class="mx-3 text-white" href="#"><i class="fab fa-twitter fa-lg"></i></a>
+            <a class="mx-3 text-white" href="#"><i class="fab fa-facebook-f fa-lg"></i></a>
+            <a class="mx-3 text-white" href="#"><i class="fab fa-github fa-lg"></i></a>
+        </div>
+    </div>
+</section>
+
+<script>
+    function copyEmail() {
+        const email = "duongha782003@gmail.com";
+        navigator.clipboard.writeText(email).then(() => {
+            alert("Đã sao chép email!");
+        });
+    }
+</script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    var map = L.map('map').setView([21.046638, 105.784911], 18);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.marker([21.046638, 105.784911]).addTo(map)
+        .bindPopup('ShopPet - 235 Hoàng Quốc Việt')
+        .openPopup();
+</script>

@@ -1,0 +1,126 @@
+﻿@model qlthucung.Models.ChiTietDonHangViewModel
+
+@{
+    ViewData["Title"] = "QLChiTietDonHang";
+    Layout = "~/Views/Shared/_StaffLayout.cshtml";
+}
+
+<form asp-action="QLChiTietDonHang" method="post">
+    @Html.AntiForgeryToken()
+    <div class="row p-4">
+        <div class="col-lg-4 col-md-12">
+            <input type="hidden" asp-for="DonHang.Madon" />
+
+            <div class="form-group">
+                <label>Mã đơn:</label>
+                <span>@Model.DonHang.Madon</span>
+            </div>
+
+            <div class="form-group">
+                <label>Tên khách hàng:</label>
+                <span>@Model.KhachHang.Hoten</span>
+                <input type="hidden" asp-for="KhachHang.Makh" />
+            </div>
+
+            <div class="form-group">
+                <label>Tên tài khoản:</label>
+                <span>@Model.KhachHang.Tendangnhap</span>
+            </div>
+
+            <div class="form-group">
+                <label>Địa chỉ:</label>
+                <span>@Model.KhachHang.Diachi</span>
+            </div>
+
+            <div class="form-group">
+                <label>Số điện thoại:</label>
+                <span>@Model.KhachHang.Dienthoai</span>
+            </div>
+
+            <div class="form-group">
+                <label>Phương thức thanh toán:</label>
+                <span>@Model.DonHang.Thanhtoan</span>
+            </div>
+        </div>
+
+        <div class="col-lg-8 col-md-12">
+            <div class="form-group">
+                <label>Trạng thái thanh toán:</label>
+                @if(Model.DonHang.Thanhtoan == "COD")
+                {
+                    <select class="form-control" asp-for="GiaoDich.Trangthaithanhtoan" asp-items="ViewBag.TrangThaiThanhToan">
+                        <option value="null">-- Chọn trạng thái --</option>
+                    </select>
+                }
+                else
+                {
+                    <input class="form-control" value="@Model.GiaoDich?.Trangthaithanhtoan" disabled />
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="DonHang_Giaohang">Trạng thái giao hàng:</label>
+                <select class="form-control" asp-for="DonHang.Giaohang" asp-items="ViewBag.TrangThaiGiaoHang">
+                    <option value="null">-- Chọn trạng thái --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Ngày đặt:</label>
+                <input class="form-control" value="@Model.DonHang.Ngaydat?.ToString("dd/MM/yyyy")" disabled />
+            </div>
+
+            <div class="form-group">
+                <label for="DonHang_Ngaygiao">Ngày giao:</label>
+                <input class="form-control" asp-for="DonHang.Ngaygiao" type="date" />
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <center><input type="submit" value="Lưu" class="btn btn-primary w-75" /></center>
+    </div>
+</form>
+
+<form>
+    <div class="card mt-3 p-3">
+        <h2 class="py-2 text-center">Chi tiết sản phẩm</h2>
+        <div class="fix-width scroll-inner">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Tên sản phẩm</th>
+                        <th>Hình</th>
+                        <th>Số lượng</th>
+                        <th>Giá</th>
+                        <th>Tổng giá</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.ChiTietDonHangs)
+                    {
+                        <tr>
+                            <td>@item.SanPham.Tensp</td>
+                            <td><img src="@item.SanPham.Hinh" height="100px" /></td>
+                            <td>@item.ChiTiet.Soluong</td>
+                            <td>@($"{item.ChiTiet.Gia:N0} đ")</td>
+                            <td>@($"{item.ChiTiet.Soluong * item.ChiTiet.Gia:N0} đ")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<div>
+    <center>
+        <a asp-action="QLDonHang" class="btn btn-primary w-75 mt-3">Back to List</a>
+    </center>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

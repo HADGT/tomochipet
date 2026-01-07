@@ -1,0 +1,121 @@
+﻿@model PaginatedList<NguoiDungViewModel>
+@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+<h2 class="text-center mb-4">Danh sách người dùng</h2>
+
+<a asp-action="CreateUser" asp-controller="RoleAdmin" class="btn btn-success">
+    + Thêm tài khoản nhân viên
+</a>
+
+<form method="get" asp-controller="RoleAdmin" asp-action="Index">
+    <b class="pr-2 pl-2">Tìm kiếm theo tên</b>
+
+    <div class="d-flex align-items-center pl-2 pr-2">
+        <input id="search" name="searchTerm" for="searchTerm" required type="text" class="form-control mr-1" value="@ViewBag.SearchTerm">
+        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+    </div>
+</form>
+<div class="container">
+    <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Họ tên</th>
+                <th>Tên đăng nhập</th>
+                <th>Ngày sinh</th>
+                <th>Email</th>
+                <th>Xác thực</th>
+                <th>Khóa đến</th>
+                <th>Khóa</th>
+                <th>Số lần lỗi</th>
+                <th>Quyền</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td>@user.FullName</td>
+                    <td>@user.UserName</td>
+                    <td>@user.BirthDate.ToString("dd/MM/yyyy")</td>
+                    <td>@user.Email</td>
+                    <td>@(user.EmailConfirmed ? "✔️" : "❌")</td>
+                    <td>@(user.LockoutEnd?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                    <td>@(user.LockoutEnabled ? "✔️" : "❌")</td>
+                    <td>@user.AccessFailedCount</td>
+                    <td>
+                        <form asp-action="UpdateRole" asp-controller="RoleAdmin" method="post" class="d-flex justify-content-center">
+                            <input type="hidden" name="pageNumber" value="@Model.PageIndex" />
+                            <input type="hidden" name="userName" value="@user.UserName" />
+                            <select name="newRole" class="form-select form-select-sm me-1">
+                                <option value="User" selected="@(user.Role == "User")">User</option>
+                                <option value="Admin" selected="@(user.Role == "Admin")">Admin</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary">✔</button>
+                        </form>
+                    </td>
+                    <td>
+                        @if (user.UserName != User.Identity.Name)
+                        {
+                            if (user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.UtcNow)
+                            {
+                                <form asp-action="UnlockUser" asp-controller="RoleAdmin" method="post">
+                                    <input type="hidden" name="userName" value="@user.UserName" />
+                                    <input type="hidden" name="pageNumber" value="@Model.PageIndex" />
+                                    <button type="submit" class="btn btn-sm btn-success">Mở khóa</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-action="LockUser" asp-controller="RoleAdmin" method="post">
+                                    <input type="hidden" name="userName" value="@user.UserName" />
+                                    <input type="hidden" name="pageNumber" value="@Model.PageIndex" />
+                                    <button type="submit" class="btn btn-sm btn-danger">Khóa</button>
+                                </form>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-muted">Không thể khóa chính bạn</span>
+                        }
+                    </td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <ul class="pagination justify-content-center mt-3">
+        @if (Model.HasPreviousPage)
+        {
+            <li class="page-item">
+                <a class="page-link" href="@Url.Action("Index", new { pageNumber = Model.PageIndex - 1, searchTerm = ViewBag.SearchTerm })">Previous</a>
+            </li>
+        }
+
+        @for (int i = 1; i <= Model.TotalPages; i++)
+        {
+            if (i == Model.PageIndex)
+            {
+                <li class="page-item active"><span class="page-link">@i</span></li>
+            }
+            else
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@Url.Action("Index", new { pageNumber = i, searchTerm = ViewBag.SearchTerm })">@i</a>
+                </li>
+            }
+        }
+
+        @if (Model.HasNextPage)
+        {
+            <li class="page-item">
+                <a class="page-link" href="@Url.Action("Index", new { pageNumber = Model.PageIndex + 1, searchTerm = ViewBag.SearchTerm })">Next</a>
+            </li>
+        }
+
+    </ul>
+</div>

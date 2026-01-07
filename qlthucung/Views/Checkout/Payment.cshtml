@@ -1,0 +1,174 @@
+﻿@model IEnumerable<qlthucung.Models.SanPham>
+@{
+    ViewData["Title"] = "CreatePaymentMomo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="~/Content/css/style.min.css" />
+<style>
+    .cart__body {
+        width: 90%;
+    }
+
+    .body {
+        width: 90%;
+    }
+</style>
+
+<div class="body fix-width scroll-inner pt-5" style="margin-top: 50px;">
+    <table class="table table-striped">
+
+        @if (ViewBag.cart == null)
+        {
+            <tr>Giỏ hàng trống</tr>
+        }
+        else
+        {
+            <tr>
+                <th>Id</th>
+                <th>Tên sp</th>
+                <th>Hình</th>
+                <th>Đơn giá</th>
+                <th>Số lượng</th>
+                <th>Tổng tiền</th>
+                <th></th>
+            </tr>
+
+            @foreach (var item in ViewBag.cart)
+            {
+                <tr>
+                    <td>@item.Product.Masp</td>
+                    <td>@item.Product.Tensp</td>
+                    <td><img src="@item.Product.Hinh" width="60" /> </td>
+                    <td>@string.Format("{0:N0}", item.Product.Giakhuyenmai)</td>
+                    <td>@item.Quantity</td>
+                    <td>@string.Format("{0:N0}", item.Product.Giakhuyenmai * item.Quantity)</td>
+                    <td><a asp-controller="cart" asp-action="remove" asp-route-id="@item.Product.Masp">Xóa sản phẩm</a></td>
+                </tr>
+            }
+            <tr>
+                <td align="right" colspan="6"><b>Tổng tiền thanh toán</b></td>
+                <td>
+                    <b>
+                        @string.Format("{0:N0}", @ViewBag.total)
+                    </b>
+                </td>
+            </tr>
+        }
+
+    </table>
+    <br>
+
+</div>
+
+<div class="cart__body">
+    <div class="row pb-5">
+        <div class="col-lg-6 cart__items-box text-left">
+            <a class="btn btn-danger" style="color: #fff; background-color: coral; border-color: coral;" asp-controller="SanPham" asp-action="index">Tiếp tục mua sắm</a>
+            @if (ViewBag.cart == null)
+            {
+                <div class="emptyCart text-center">
+                    <img height="30%" src="~/Content/images/empty_cart.png" alt="#">
+                </div>
+            }
+            else
+            {
+                <div class="cart__items">
+                    <div class="row pb-5">
+                        @foreach (var item in ViewBag.cart)
+                        {
+                            <div class="col-sm-3 col-5 mt-2">
+                                <img src="@item.Product.Hinh" alt="" class="cart__items-img">
+                            </div>
+                            <div class="col-sm-9 col-7 mt-2">
+                                <h3>
+                                    @item.Product.Tensp
+                                </h3>
+
+                                <br>
+                                <div class="cart__items-pride">
+                                    <div class="product__pride-newPride">
+                                        <span class="Price">
+                                            <bdi>
+                                                @string.Format("{0:N0}", item.Product.Giakhuyenmai * item.Quantity)&nbsp;
+                                                <span class="currencySymbol">₫</span>
+                                            </bdi>
+                                        </span>
+                                    </div>
+
+                                    <div class="cart__items-count">
+                                        Số lượng
+                                        <input type="number" name="quantity" value="@item.Quantity" min="1" class="w-25">
+                                    </div>
+
+                                </div>
+                                <a class="btn btn-sm btn-danger" asp-controller="cart" asp-action="remove" asp-route-id="@item.Product.Masp">Xóa sản phẩm</a>
+                            </div>
+                        }
+                    </div>
+
+
+                </div>
+
+            }
+
+        </div>
+
+        <div class="col-lg-5" style="padding-left: 20px; padding-right: 10px;">
+            <div>
+                <div class="cart__info pb-5">
+                    <div class="body__mainTitle">
+                        <h2>ĐỊA CHỈ NHẬN HÀNG</h2>
+                    </div>
+                    <center>
+                        <div class="cart__info-form">
+                            <input type="text" placeholder="Họ và tên" name="FullName" value="@ViewBag.fullName" disabled />
+                            <input type="text" placeholder="username" name="username" value="@ViewBag.username" disabled />
+                            <input type="email" placeholder="Email" name="email" value="@ViewBag.email" disabled>
+                            <input type="text" placeholder="Số điện thoại" name="sdt" value="@ViewBag.phoneNumber" disabled>
+                            <input type="hidden" name="ngaysinh" value="@ViewBag.birthDate">
+                            <div class="address">
+                                <h6>Tỉnh / Thành Phố</h6>
+                                <input type="text" name="calc_shipping_provinces" value="@ViewBag.tinh" disabled>
+                            </div>
+                            <div class="address">
+                                <h6>Quận / Huyện</h6>
+                                <input type="text" name="calc_shipping_district" value="@ViewBag.xa" disabled>
+                            </div>
+                            <div class="address">
+                                <h6>Số nhà: </h6>
+                                <input type="text" name="sonha" value="@ViewBag.diachi" disabled>
+                            </div>
+                        </div>
+                    </center>
+                    <div class="total">
+                        <span style="font-size: 1.7rem; color: coral; font-weight: 600; margin-top: -11px;">Tổng thanh toán</span>
+                        <br>
+
+                        <div class="product__pride-newPride" style="font-size: 25px;">
+                            <span class="Price">
+                                <bdi>
+                                    @if (ViewBag.total != null)
+                                    {
+                                        <b>@string.Format("{0:N0}", ViewBag.total)</b>
+                                    }
+                                    &nbsp;
+                                    <span class="currencySymbol">₫</span>
+                                </bdi>
+                            </span>
+                        </div>
+                    </div>
+                    <center>
+                        <form method="POST" asp-controller="OnlineCheckout" asp-action="CreatePaymentUrlVnpay">
+                            <input type="hidden" name="amount" value="@($"{ViewBag.total:0.00}")" />
+                            <button class="buy" name="PayUrl" type="submit">Xác nhận thanh toán VnPay</button>
+                        </form>
+                    </center>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.3.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/vietblogdao/js/districts.min.js"></script>

@@ -1,0 +1,32 @@
+﻿@model qlthucung.Models.MoMoPayment
+@{
+    ViewData["Title"] = "DetailsGD";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+
+<h2>Chi tiết giao dịch</h2>
+
+<div>
+    <dl class="row">
+        <dt class="col-sm-3">Mã giao dịch</dt>
+        <dd class="col-sm-9">@Model.Magiaodich</dd>
+
+        <dt class="col-sm-3">Đơn hàng</dt>
+        <dd class="col-sm-9">@Model.Madon</dd>
+
+        <dt class="col-sm-3">Số tiền</dt>
+        <dd class="col-sm-9">@Model.Amount.ToString("N0") đ</dd>
+
+        <dt class="col-sm-3">Trạng thái</dt>
+        <dd class="col-sm-9">@Model.Trangthaithanhtoan</dd>
+
+        <dt class="col-sm-3">Tin nhắn trả về</dt>
+        <dd class="col-sm-9">@Model.Tinnhantrave</dd>
+
+        <dt class="col-sm-3">Ngày tạo</dt>
+        <dd class="col-sm-9">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+    </dl>
+    <a asp-action="QLGiaoDich">Quay lại danh sách</a>
+</div>
+
