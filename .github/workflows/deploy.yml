@@ -32,3 +32,8 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/qlthucung:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/qlthucung:latest
+
+      - name: Create Google credentials file
+        run: |
+            echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > credentials.json
+

@@ -8,3 +8,5 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app .
 ENTRYPOINT ["dotnet", "qlthucung.dll"]
+env:
+  GOOGLE_APPLICATION_CREDENTIALS: qlthucung/credentials.json
