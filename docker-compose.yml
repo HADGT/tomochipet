@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   qlthucung:
-    image: ${DOCKER_USERNAME}/qlthucung:latest
+    image: ${DOCKER_USERNAME}/TomochiPet:latest
     container_name: qlthucung_web
     ports:
       - "8080:80"
