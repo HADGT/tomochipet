@@ -265,18 +265,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const userMenu = document.querySelector(".user-menu");
-            const dropdown = userMenu.querySelector(".dropdown-menu-custom");
+          const userMenu = document.querySelector(".user-menu");
+          const dropdown = userMenu ? userMenu.querySelector(".dropdown-menu-custom") : null;
 
-            userMenu.addEventListener("click", function (e) {
-                e.stopPropagation(); // ngăn lan ra ngoài
-                dropdown.classList.toggle("show");
-            });
-
-            // click ra ngoài thì đóng menu
-            document.addEventListener("click", function () {
-                // dropdown.classList.remove("show");
-            });
+          userMenu.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (dropdown) {
+              dropdown.classList.toggle("show");
+            } else {
+              // optional: handle anonymous case, e.g. navigate to sign-in
+              window.location.href = '/Security/SignIn';
+            }
+          });
         });
         function removeCartItem(productId) {
             fetch('/Cart/RemoveAjax/' + productId, { method: 'POST' })

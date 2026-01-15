@@ -10,6 +10,8 @@ namespace qlthucung.Services.chat
     {
         Task<List<Message>> GetMessagesAsync(string userId);
         Task<string> GetPetAdviceAsync(ChatQuery query);
-        Task<string> AskAsync(ChatQuery query);
+        Task<string> AskAsync(string query);
+        Task<List<Product>> GetProductsFallback(HybridQuery queryVector, string petType);
+        Task TrainContentIndexAsync();
     }
 }

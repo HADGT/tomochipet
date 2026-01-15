@@ -1,22 +1,22 @@
-# ========================
 # Build stage
-# ========================
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY . .
+# Copy csproj(s) first for cache (optional, if single project you can keep simple)
+COPY *.sln ./
+COPY qlthucung/*.csproj ./qlthucung/
 RUN dotnet restore
-RUN dotnet publish -c Release -o /app
 
-# ========================
+COPY . .
+RUN dotnet publish qlthucung -c Release -o /app
+
 # Runtime stage
-# ========================
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Set environment variable for Google credentials
+# If you prefer file mount method, keep this (code currently uses GOOGLE_CREDENTIALS_JSON, see below)
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 
-COPY --from=build /app .
+COPY --from=build /app ./
 
 ENTRYPOINT ["dotnet", "qlthucung.dll"]

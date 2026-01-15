@@ -15,6 +15,7 @@ using qlthucung.Services.chat;
 using qlthucung.Services.email;
 using qlthucung.Services.vnpay;
 using System;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,9 +54,24 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 // ==========================
+// REGISTER TF-IDF INDEXER (SCOPED)
+// ==========================
+// TfidfIndexer depends on AppDbContext (scoped) and a path string
+builder.Services.AddScoped<TfidfIndexer>(sp =>
+{
+    var ctx = sp.GetRequiredService<AppDbContext>();
+    var indexPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tfidf_index.json");
+    return new TfidfIndexer(indexPath, ctx);
+});
+
+// Hosted initializer to load/build index asynchronously at startup
+builder.Services.AddHostedService<TfidfIndexInitializer>();
+
+// ==========================
 // SERVICES
 // ==========================
 builder.Services.AddScoped<IVnPayService, VnPayService>();
+builder.Services.AddSingleton<IEmbeddingService, OpenAIEmbeddingService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IViewRenderService, ViewRenderService>();
 

@@ -2,13 +2,22 @@ version: "3.9"
 
 services:
   qlthucung:
-    image: ${DOCKER_USERNAME}/qlthucung:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: "${DOCKER_USERNAME:-localuser}/qlthucung:latest"
     container_name: qlthucung_web
     ports:
       - "8080:80"
     restart: always
     environment:
       - ASPNETCORE_URLS=http://+:80
+      # If you want the app to read GOOGLE_CREDENTIALS_JSON (content), set it here (use secrets in CI)
+      - GOOGLE_CREDENTIALS_JSON=${GOOGLE_CREDENTIALS_JSON}
+    volumes:
+      # Mount service account JSON file into container (option)
+      - ./credentials.json:/app/credentials.json:ro
+
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower

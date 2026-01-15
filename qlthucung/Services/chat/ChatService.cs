@@ -1,31 +1,33 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using GenerativeAI;
+using Google;
+using Google.Apis.Sheets.v4.Data;
+using Microsoft.AspNet.SignalR.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client;
+using Microsoft.VisualBasic;
+using Newtonsoft.Json;
 using qlthucung.Models;
+using qlthucung.Models.Chat;
 using System;
 using System.Collections.Generic;
+using System.Composition;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
-using System.Composition;
-using Microsoft.Extensions.Options;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Text;
-using Microsoft.AspNet.SignalR.Json;
-using Newtonsoft.Json;
-using GenerativeAI.Types;
-using GenerativeAI;
-using qlthucung.Models.Chat;
-using Google.Apis.Sheets.v4.Data;
-using Microsoft.VisualBasic;
-using static System.Net.Mime.MediaTypeNames;
 using System.Security.Policy;
-using Microsoft.Identity.Client;
-using Google;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using Microsoft.AspNetCore.Mvc;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static qlthucung.Models.Chatbot;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace qlthucung.Services.chat
 {
@@ -37,55 +39,83 @@ namespace qlthucung.Services.chat
         private readonly string _apiKey;
         private readonly GenerativeModel _model;
 
+        // NEW: TF-IDF indexer
+        private readonly TfidfIndexer _indexer;
+
+        // Optional embedding provider (resolved via IServiceProvider)
+        private readonly IEmbeddingService _embeddingService;
+
         public string SanPhamApiUrl { get; set; }
         public string DichVuApiUrl { get; set; }
 
-        public ChatService(AppDbContext context, IConfiguration configuration)
+        // Basic Vietnamese stopwords (extend as needed)
+        private static readonly HashSet<string> VietnameseStopwords = new(StringComparer.OrdinalIgnoreCase)
         {
-            _context = context;
-            _apiKey = configuration["ChatAI:ApiKey"]
-            ?? throw new Exception("Missing Gemini API key");
-            _baseApiUrl = configuration["App:BaseApiUrl"] ?? "http://localhost:5172";
-        }
+            "và","của","là","có","cho","với","để","trong","một","những","đã","rất","như","khi","tôi","bạn","cần","các","đó","này","ở","ra","về","vẫn"
+        };
 
-        public void API_link_web(ChatService service)
+        public ChatService(AppDbContext context, IConfiguration configuration, TfidfIndexer indexer, IEmbeddingService embeddingService)
         {
-            string base_api_url = service._baseApiUrl;
-            SanPhamApiUrl = base_api_url + "/SanPham";
-            DichVuApiUrl = base_api_url + "/DichVu";
-        }
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _indexer = indexer ?? throw new ArgumentNullException(nameof(indexer));
+            _embeddingService = embeddingService;
+            _apiKey = _configuration["ChatAI:ApiKey"]
+                ?? throw new Exception("Missing Gemini API key");
+            _baseApiUrl = _configuration["App:BaseApiUrl"] ?? "http://localhost:5172";
 
+            // Ensure URLs are initialized
+            SanPhamApiUrl = _baseApiUrl + "/SanPham";
+            DichVuApiUrl = _baseApiUrl + "/DichVu";
+        }
         private List<string> Tokenize(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
                 return new List<string>();
 
-            return text
-                .ToLower()
-                .Replace(",", " ")
-                .Replace(".", " ")
-                .Replace("-", " ")
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Distinct()
+            // Normalize and lowercase
+            text = text.Normalize(System.Text.NormalizationForm.FormKD).ToLowerInvariant();
+
+            // Replace punctuation (keep letters, numbers and spaces). This works for Vietnamese characters.
+            text = Regex.Replace(text, @"[^\p{L}\p{Nd}\s]+", " ");
+
+            // Split into tokens
+            var tokens = text
+                .Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .Where(t => t.Length > 1) // remove single-char tokens (adjust if needed)
+                .Where(t => !VietnameseStopwords.Contains(t))
                 .ToList();
+
+            return tokens;
         }
 
-
+        // Build bag-of-words vector preserving term frequency (no Distinct).
         private Dictionary<string, double> GetVector(string text)
         {
             var tokens = Tokenize(text);
 
-            var vector = new Dictionary<string, double>();
+            var vector = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var token in tokens)
             {
                 if (!vector.ContainsKey(token))
                     vector[token] = 1;
                 else
-                    vector[token]++;
+                    vector[token] += 1;
             }
 
             return vector;
+        }
+
+        // Small helper: extract short phrases (2-grams) to improve keyword coverage
+        private IEnumerable<string> ExtractNgrams(IEnumerable<string> tokens, int n = 2)
+        {
+            var list = tokens.ToList();
+            for (int i = 0; i + n <= list.Count; i++)
+            {
+                yield return string.Join(' ', list.Skip(i).Take(n));
+            }
         }
 
         private double CosineSimilarity(
@@ -128,33 +158,68 @@ namespace qlthucung.Services.chat
             return score;
         }
 
-        private double Normalize(double score)
+        private double Normalize(double score) => Math.Min(score / 5.0, 1.0);
+
+        public async Task TrainContentIndexAsync()
         {
-            return Math.Min(score / 5.0, 1.0);
+            await _indexer.BuildIndexAsync();
+            if (_indexer.IsReady)
+                await _indexer.SaveAsync();
+            else
+                throw new Exception("Indexer build failed or no documents to index.");
         }
 
         public async Task<List<Product>> GetProducts(HybridQuery queryVector, string petType)
         {
-            // Tìm kiếm Danh mục 
-            var parent = await _context.DanhMucs
-                .FirstOrDefaultAsync(dm => dm.Tendanhmuc.Trim().ToLower() == petType.Trim().ToLower());
+            // If index ready, use TF-IDF retrieval
+            if (_indexer.IsReady)
+            {
+                var hits = _indexer.Query(queryVector.RawText ?? "", 10); // get top 10 documents
+                var productIds = hits.Where(h => h.docId.StartsWith("P_")).Select(h => int.Parse(h.docId.Substring(2))).ToList();
+                if (productIds.Count == 0)
+                    return await GetProductsFallback(queryVector, petType);
 
-            if (parent == null)
-                return new List<Product>();
+                var products = await _context.SanPhams.Where(sp => productIds.Contains(sp.Masp)).ToListAsync();
+                var categoryMap = await _context.DanhMucs.ToDictionaryAsync(dm => dm.IdDanhmuc, dm => dm.Tendanhmuc);
+
+                var dto = products.Select(sp => new Product
+                {
+                    Id = sp.Masp,
+                    Name = sp.Tensp,
+                    Price = sp.Giakhuyenmai ?? 0,
+                    ProductUrl = SanPhamApiUrl + "/Details/" + sp.Masp,
+                    Type = (categoryMap.ContainsKey(sp.IdDanhmuc ?? 0) ? categoryMap[sp.IdDanhmuc ?? 0] : "") + " " + (sp.Mota ?? "")
+                }).ToList();
+
+                var results = new List<(Product product, double score)>();
+                foreach (var p in dto)
+                {
+                    double keywordScore = CalculateKeywordScore(queryVector.Keywords, p);
+                    var productVector = GetVector(p.Name + p.Type);
+                    double vectorScore = CosineSimilarity(queryVector.Vector, productVector);
+
+                    // If embeddings available, you can compute semantic score separately and combine here.
+                    double finalScore = 0.4 * keywordScore + 0.6 * vectorScore;
+                    results.Add((p, finalScore));
+                }
+
+                return results.OrderByDescending(x => x.score).Take(5).Select(x => x.product).ToList();
+            }
+
+            return await GetProductsFallback(queryVector, petType);
+        }
+        public async Task<List<Product>> GetProductsFallback(HybridQuery queryVector, string petType)
+        {
+            var parent = await _context.DanhMucs.FirstOrDefaultAsync(dm => dm.Tendanhmuc.Trim().ToLower() == petType.Trim().ToLower());
+            if (parent == null) return new List<Product>();
 
             List<int> allCategoryNames = await _context.DanhMucs
-                            .Where(dm => (dm.ParentID != null && dm.ParentID.Trim().ToLower() == parent.Tendanhmuc.Trim().ToLower())
-                                     || dm.IdDanhmuc == parent.IdDanhmuc)
-                            .Select(dm => dm.IdDanhmuc) // Lấy tên danh mục để lọc metadata trong Vector DB
-                            .ToListAsync();
+                .Where(dm => (dm.ParentID != null && dm.ParentID.Trim().ToLower() == parent.Tendanhmuc.Trim().ToLower())
+                            || dm.IdDanhmuc == parent.IdDanhmuc)
+                .Select(dm => dm.IdDanhmuc).ToListAsync();
 
-            // Lấy Dữ liệu chi tiết từ DB (SQL)
-            var products = await _context.SanPhams
-                .Where(sp => allCategoryNames.Contains((int)sp.IdDanhmuc))
-                .ToListAsync();
-
-            var categoryMap = await _context.DanhMucs
-                .ToDictionaryAsync(dm => dm.IdDanhmuc, dm => dm.Tendanhmuc);
+            var products = await _context.SanPhams.Where(sp => allCategoryNames.Contains((int)sp.IdDanhmuc)).ToListAsync();
+            var categoryMap = await _context.DanhMucs.ToDictionaryAsync(dm => dm.IdDanhmuc, dm => dm.Tendanhmuc);
 
             var dto = products.Select(sp => new Product
             {
@@ -162,34 +227,20 @@ namespace qlthucung.Services.chat
                 Name = sp.Tensp,
                 Price = sp.Giakhuyenmai ?? 0,
                 ProductUrl = SanPhamApiUrl + "/Details/" + sp.Masp,
-                Type = (categoryMap.ContainsKey(sp.IdDanhmuc ?? 0)
-                ? categoryMap[sp.IdDanhmuc ?? 0]
-                : "") + " " + (sp.Mota ?? "")
+                Type = (categoryMap.ContainsKey(sp.IdDanhmuc ?? 0) ? categoryMap[sp.IdDanhmuc ?? 0] : "") + " " + (sp.Mota ?? "")
             }).ToList();
 
             var results = new List<(Product product, double score)>();
-
             foreach (var p in dto)
             {
                 double keywordScore = CalculateKeywordScore(queryVector.Keywords, p);
-
-
-                Dictionary<string, double> productVector = GetVector(p.Name + p.Type);
-
-                double vectorScore =
-                    CosineSimilarity(queryVector.Vector, productVector);
-
-                double finalScore =
-                    0.4 * keywordScore +
-                    0.6 * vectorScore;
+                var productVector = GetVector(p.Name + p.Type);
+                double vectorScore = CosineSimilarity(queryVector.Vector, productVector);
+                double finalScore = 0.4 * keywordScore + 0.6 * vectorScore;
                 results.Add((p, finalScore));
             }
 
-            return results
-                .OrderByDescending(x => x.score)
-                .Take(3)
-                .Select(x => x.product)
-                .ToList();
+            return results.OrderByDescending(x => x.score).Take(5).Select(x => x.product).ToList();
         }
 
         public async Task<List<Message>> GetMessagesAsync(string userId)
@@ -210,45 +261,83 @@ namespace qlthucung.Services.chat
 
         public async Task<List<Product>> GetProductsForHealth(HybridQuery queryVector)
         {
-            // CÁC BƯỚC LỌC TRƯỚC (Giữ nguyên logic loại trừ danh mục "Thú cưng")
-
-            // 1. Xác định tên danh mục cần loại trừ
-            const string EXCLUDED_CATEGORY_NAME = "Thú cưng";
-
-            // KHAI BÁO BIẾN Ở PHẠM VI TOÀN BỘ PHƯƠNG THỨC
-            List<int> excludedCategoryIds = new List<int>();
-
-            // Tìm kiếm Danh mục (Giữ nguyên logic giới hạn danh mục)
-            var parent = await _context.DanhMucs
-                .FirstOrDefaultAsync(dm => dm.Tendanhmuc.Trim().ToLower() == EXCLUDED_CATEGORY_NAME.ToLower());
-
-            if (parent != null) // Đã tìm thấy danh mục cha (parent)
+            if (_indexer.IsReady)
             {
-                // 1. Lấy tất cả IDs của danh mục "Thú cưng" (parent) và các danh mục con của nó (IDs CẦN LOẠI TRỪ)
+                var hits = _indexer.Query(queryVector.RawText ?? "", 10);
+                var productIds = hits.Where(h => h.docId.StartsWith("P_")).Select(h => int.Parse(h.docId.Substring(2))).ToList();
+                var serviceIds = hits.Where(h => h.docId.StartsWith("S_")).Select(h => int.Parse(h.docId.Substring(2))).ToList();
+
+                var sanPhams = await _context.SanPhams.Where(sp => productIds.Contains(sp.Masp)).ToListAsync();
+                var dichVus = await _context.SPDichVu.Where(dv => serviceIds.Contains(dv.DichVuID)).ToListAsync();
+                var categoryMap = await _context.DanhMucs.ToDictionaryAsync(dm => dm.IdDanhmuc, dm => dm.Tendanhmuc);
+
+                var results = new List<(Product product, double score)>();
+
+                foreach (var sp in sanPhams)
+                {
+                    var product = new Product
+                    {
+                        Id = sp.Masp,
+                        Name = sp.Tensp,
+                        Price = sp.Giakhuyenmai ?? 0,
+                        ProductUrl = SanPhamApiUrl + "/Details/" + sp.Masp,
+                        Type = (categoryMap.ContainsKey(sp.IdDanhmuc ?? 0) ? categoryMap[sp.IdDanhmuc ?? 0] : "") + " " + (sp.Mota ?? "")
+                    };
+
+                    int keywordScore = CalculateKeywordScore(queryVector.Keywords, product);
+                    var vectorStr = GetVector(sp.Tensp + " " + sp.Mota);
+                    double vectorScore = CosineSimilarity(queryVector.Vector, vectorStr);
+                    double finalScore = 0.4 * keywordScore + 0.6 * vectorScore;
+                    results.Add((product, finalScore));
+                }
+
+                foreach (var dv in dichVus)
+                {
+                    var service = new Product
+                    {
+                        Id = dv.DichVuID,
+                        Name = dv.TenDichVu,
+                        Price = dv.Gia ?? 0,
+                        ProductUrl = DichVuApiUrl + "/Datlich",
+                        Type = dv.MoTa + " thú cưng"
+                    };
+
+                    int keywordScore = CalculateKeywordScore(queryVector.Keywords, service);
+                    var vectorStr = GetVector(dv.TenDichVu);
+                    double vectorScore = CosineSimilarity(queryVector.Vector, vectorStr);
+                    double finalScore = 0.4 * keywordScore + 0.6 * vectorScore;
+                    results.Add((service, finalScore));
+                }
+
+                return results.OrderByDescending(x => x.score).Take(5).Select(x => x.product).ToList();
+            }
+
+            return await GetProductsForHealthFallback(queryVector);
+        }
+
+        private async Task<List<Product>> GetProductsForHealthFallback(HybridQuery queryVector)
+        {
+            const string EXCLUDED_CATEGORY_NAME = "Thú cưng";
+            List<int> excludedCategoryIds = new List<int>();
+            var parent = await _context.DanhMucs
+                .FirstOrDefaultAsync(dm => dm.Tendanhmuc.Trim().ToLower() != EXCLUDED_CATEGORY_NAME.ToLower());
+
+            if (parent != null)
+            {
                 excludedCategoryIds = await _context.DanhMucs
                     .Where(dm => (dm.ParentID != null && dm.ParentID.Trim().ToLower() == parent.Tendanhmuc.Trim().ToLower())
                              || dm.IdDanhmuc == parent.IdDanhmuc)
-                    .Select(dm => dm.IdDanhmuc) // CHỈ LẤY ID
+                    .Select(dm => dm.IdDanhmuc)
                     .ToListAsync();
             }
-            /* =======================
-             * 2. Lấy toàn bộ SẢN PHẨM hợp lệ
-             * ======================= */
+
             var sanPhams = await _context.SanPhams
                 .Where(sp => !excludedCategoryIds.Contains(sp.IdDanhmuc ?? 0))
                 .ToListAsync();
 
-            /* =======================
-             * 3. Lấy toàn bộ DỊCH VỤ
-             * ======================= */
             var dichVus = await _context.SPDichVu.ToListAsync();
-
-            /* =======================
-             * 4. Hybrid Scoring
-             * ======================= */
             var results = new List<(Product product, double score)>();
 
-            // ---- SẢN PHẨM ----
             foreach (var sp in sanPhams)
             {
                 var categoryMap = await _context.DanhMucs
@@ -280,7 +369,6 @@ namespace qlthucung.Services.chat
                 results.Add((product, finalScore));
             }
 
-            // ---- DỊCH VỤ ----
             foreach (var dv in dichVus)
             {
                 var service = new Product
@@ -307,16 +395,12 @@ namespace qlthucung.Services.chat
                 results.Add((service, finalScore));
             }
 
-            /* =======================
-             * 5. Sort + Take
-             * ======================= */
             return results
                 .OrderByDescending(x => x.score)
                 .Take(5)
                 .Select(x => x.product)
                 .ToList();
         }
-
         private string CleanJsonFromAI(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -339,7 +423,6 @@ namespace qlthucung.Services.chat
             return text.Trim();
         }
 
-
         public async Task<IntentResult> CallAIAsync(string prompt)
         {
             string apiKey = _apiKey;
@@ -353,14 +436,11 @@ namespace qlthucung.Services.chat
             {
                 contents = new[]
                 {
-            new
-            {
-                parts = new[]
-                {
-                    new { text = prompt }
-                }
-            }
-        },
+                    new
+                    {
+                        parts = new[] { new { text = prompt } }
+                    }
+                },
                 generationConfig = new
                 {
                     temperature = 0.0,
@@ -376,26 +456,42 @@ namespace qlthucung.Services.chat
             var response = await http.PostAsync(url, content);
             var result = await response.Content.ReadAsStringAsync();
 
+            // If API returned non-success, return null to trigger fallback message
+            if (!response.IsSuccessStatusCode)
+            {
+                // Optionally you can log `result` somewhere to inspect the failure
+                return null;
+            }
+
             using var doc = System.Text.Json.JsonDocument.Parse(result);
             var root = doc.RootElement;
 
             if (!root.TryGetProperty("candidates", out var candidates) ||
                 candidates.GetArrayLength() == 0)
             {
+                // no candidates returned
                 return null;
             }
 
             var reply = candidates[0]
-    .GetProperty("content")
-    .GetProperty("parts")[0]
-    .GetProperty("text")
-    .GetString();
+                .GetProperty("content")
+                .GetProperty("parts")[0]
+                .GetProperty("text")
+                .GetString();
 
             if (string.IsNullOrWhiteSpace(reply))
                 return null;
 
             // 🔥 CLEAN JSON
             reply = CleanJsonFromAI(reply);
+
+            // Attempt to extract JSON block even if the model included extra text
+            int start = reply.IndexOf('{');
+            int end = reply.LastIndexOf('}');
+            if (start != -1 && end != -1 && end > start)
+            {
+                reply = reply.Substring(start, end - start + 1);
+            }
 
             try
             {
@@ -408,6 +504,7 @@ namespace qlthucung.Services.chat
             }
             catch (Exception ex)
             {
+                // parsing failed - you can log `reply` and `ex.Message` for debugging
                 return null;
             }
         }
@@ -416,14 +513,16 @@ namespace qlthucung.Services.chat
         {
             try
             {
-                string apiKey = _apiKey;
-                string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
-                using (var http = new HttpClient())
+                if (query != null && !string.IsNullOrWhiteSpace(query))
                 {
-                    var requestBody = new
+                    string apiKey = _apiKey;
+                    string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+                    using (var http = new HttpClient())
                     {
-                        contents = new[]
+                        var requestBody = new
                         {
+                            contents = new[]
+                            {
                             new {
                                 parts = new[]
                                 {
@@ -431,39 +530,42 @@ namespace qlthucung.Services.chat
                                 }
                             }
                         },
-                        generationConfig = new
+                            generationConfig = new
+                            {
+                                temperature = 0.0,
+                                topK = 1,
+                                topP = 1.0,
+                                maxOutputTokens = 4096
+                            }
+                        };
+
+                        var json = System.Text.Json.JsonSerializer.Serialize(requestBody);
+
+                        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var response = await http.PostAsync(url, content);
+                        var result = await response.Content.ReadAsStringAsync();
+
+                        using var doc = System.Text.Json.JsonDocument.Parse(result);
+                        var root = doc.RootElement;
+
+                        if (!root.TryGetProperty("candidates", out var candidates) ||
+                            candidates.GetArrayLength() == 0)
                         {
-                            temperature = 0.0,
-                            topK = 1,
-                            topP = 1.0,
-                            maxOutputTokens = 4096
+                            return "AI hiện không thể trả lời. Vui lòng thử lại sau.";
                         }
-                    };
 
-                    var json = System.Text.Json.JsonSerializer.Serialize(requestBody);
+                        var reply = candidates[0]
+                            .GetProperty("content")
+                            .GetProperty("parts")[0]
+                            .GetProperty("text")
+                            .GetString();
 
-                    var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-                    var response = await http.PostAsync(url, content);
-                    var result = await response.Content.ReadAsStringAsync();
-
-                    using var doc = System.Text.Json.JsonDocument.Parse(result);
-                    var root = doc.RootElement;
-
-                    if (!root.TryGetProperty("candidates", out var candidates) ||
-                        candidates.GetArrayLength() == 0)
-                    {
-                        return "AI hiện không thể trả lời. Vui lòng thử lại sau.";
+                        return reply ?? "AI không trả lời.";
                     }
-
-                    var reply = candidates[0]
-                        .GetProperty("content")
-                        .GetProperty("parts")[0]
-                        .GetProperty("text")
-                        .GetString();
-
-                    return reply ?? "AI không trả lời.";
                 }
+
+                return "Vui lòng nhập câu hỏi.";
             }
             catch (Exception ex)
             {
@@ -471,24 +573,75 @@ namespace qlthucung.Services.chat
             }
         }
 
-        public HybridQuery EncodeHybridQuery(string query)
+        public async Task<HybridQuery> EncodeHybridQueryAsync(string rawText, string petType, IEnumerable<string> aiKeywords = null)
         {
-            if (string.IsNullOrWhiteSpace(query))
-                return new HybridQuery();
+            rawText ??= "";
 
-            var keywords = query
-                .ToLower()
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Distinct()
-                .ToList();
+            // 1. Build base token list from raw text
+            var baseTokens = Tokenize(rawText);
 
-            Dictionary<string, double> vectorStr = GetVector(query);
+            // 2. Start keywords from AI suggestions if provided (prefer AI)
+            List<string> keywords;
+            if (aiKeywords != null && aiKeywords.Any())
+            {
+                keywords = aiKeywords
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Select(s => s.Trim().ToLowerInvariant())
+                    .Distinct()
+                    .ToList();
+            }
+            else
+            {
+                // combine tokens + 2-grams to create richer keyword set
+                var ngrams = ExtractNgrams(baseTokens, 2);
+                keywords = baseTokens.Concat(ngrams)
+                    .Select(s => s.Trim())
+                    .Where(s => s.Length > 0)
+                    .Distinct()
+                    .ToList();
+            }
+
+            // 3. Boost with petType tokens (helps bias retrieval towards pet category)
+            if (!string.IsNullOrWhiteSpace(petType))
+            {
+                var ptTokens = petType
+                    .ToLowerInvariant()
+                    .Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(t => t.Trim());
+                foreach (var t in ptTokens)
+                {
+                    if (!keywords.Contains(t))
+                        keywords.Add(t);
+                }
+            }
+
+            // 4. Build lexical retrieval vector from keywords (preserve TF by joining keywords)
+            var retrievalText = string.Join(" ", keywords);
+            var lexicalVector = GetVector(retrievalText);
+
+            // 5. Optionally compute dense embedding if embedding provider present
+            float[] embedding = null;
+            if (_embeddingService != null)
+            {
+                try
+                {
+                    // prefer using rawText for embedding (semantic) but fall back to retrievalText
+                    var embedSource = string.IsNullOrWhiteSpace(rawText) ? retrievalText : rawText;
+                    embedding = await _embeddingService.GetEmbeddingAsync(embedSource);
+                }
+                catch
+                {
+                    // embedding failure is non-fatal; continue with lexical only
+                    embedding = null;
+                }
+            }
 
             return new HybridQuery
             {
-                RawText = query,
+                RawText = rawText,
                 Keywords = keywords,
-                Vector = vectorStr
+                Vector = lexicalVector,
+                Embedding = embedding // note: HybridQuery must include Embedding property (float[]). Update model accordingly.
             };
         }
 
@@ -498,32 +651,54 @@ namespace qlthucung.Services.chat
                 You are a Pet Care AI assistant.
                 You MUST respond in Vietnamese.
 
-                Your FIRST TASK is to analyze the user's query and OUTPUT a JSON object with the following structure ONLY:
+                Return EXACTLY one JSON object and NOTHING ELSE (no markdown, no commentary, no code fences).
 
+                JSON SCHEMA (use these exact property names & casing):
                 {{
-                  ""intent"": ""product | service | health | other"",
-                  ""search_terms"": [],
-                  ""health_analysis"": {{
-                      ""symptoms"": [],
-                      ""measures"": [],
-                      ""needed_products"": [],
-                      ""needed_services"": []
+                  ""Intent"": ""product | service | health | other"",
+                  ""SearchTerms"": [],
+                  ""HealthAnalysis"": null | {{
+                      ""Symptoms"": [],
+                      ""Measures"": [],
+                      ""NeededProducts"": [],
+                      ""NeededServices"": []
                   }}
                 }}
 
                 RULES:
-                - intent MUST be one of the four values.
-                - If intent != health → health_analysis MUST be null.
-                - search_terms must be meaningful keywords extracted from the query.
-                - DO NOT explain anything.
-                - DO NOT add text outside JSON.
+                - If Intent != ""health"" then HealthAnalysis MUST be null.
+                - SearchTerms must be an array of short keyword strings (no sentences).
+                - Do NOT include additional fields.
+                - Use plain JSON only. Do NOT add explanation or text outside the JSON object.
 
                 INPUT:
                 - PetType: {pettype}
                 - UserQuery: {query}
-                ";
-        }
 
+                EXAMPLES (showing exact JSON objects only):
+
+                Product example:
+                {{
+                  ""Intent"": ""product"",
+                  ""SearchTerms"": [""chó phốc"", ""sản phẩm""],
+                  ""HealthAnalysis"": null
+                }}
+
+                Health example:
+                {{
+                  ""Intent"": ""health"",
+                  ""SearchTerms"": [""sốt"", ""nôn""],
+                  ""HealthAnalysis"": {{
+                      ""Symptoms"": [""sốt"", ""nôn""],
+                      ""Measures"": [""cho uống nước"", ""theo dõi nhiệt độ""],
+                      ""NeededProducts"": [""thuốc hạ sốt""],
+                      ""NeededServices"": [""khám thú y""]
+                  }}
+                }}
+
+                Now generate the single JSON object that matches the schema above for the provided input. Output only the JSON object."
+             ;
+        }
 
         private string BuildFinalAdvicePrompt(
             string query,
@@ -532,8 +707,8 @@ namespace qlthucung.Services.chat
             HealthAnalysis? healthAnalysis,
             string productJson
         )
-                {
-                    return $@"
+        {
+            return $@"
                         You are a **Pet Care AI Advisor**.
                         You MUST respond in **Vietnamese**.
                         You are NOT allowed to invent products or services.
@@ -609,22 +784,15 @@ namespace qlthucung.Services.chat
             /* =========================
              * 2. XÂY DỰNG HYBRID QUERY
              * ========================= */
-            List<Product> products = new();
-
+            var products = new List<Product>();
             if (analysisJson.Intent == "product")
             {
-                var hybridQuery =
-                    EncodeHybridQuery(
-                        string.Join(analysisPrompt, " ", analysisJson.SearchTerms));
-
+                var hybridQuery = await EncodeHybridQueryAsync(query.Text ?? "", query.PetType, analysisJson.SearchTerms ?? new List<string>());
                 products = await GetProducts(hybridQuery, query.PetType);
             }
             else if (analysisJson.Intent == "service")
             {
-                var hybridQuery =
-                    EncodeHybridQuery(
-                        string.Join(analysisPrompt, " ", analysisJson.SearchTerms));
-
+                var hybridQuery = await EncodeHybridQueryAsync(query.Text ?? "", query.PetType, analysisJson.SearchTerms ?? new List<string>());
                 products = await GetProductsForHealth(hybridQuery);
             }
 
@@ -632,21 +800,8 @@ namespace qlthucung.Services.chat
              * 3. TRẢ DATA CHO AI TƯ VẤN
              * ========================= */
             var productJson = System.Text.Json.JsonSerializer.Serialize(products) ?? null;
-
-            var finalPrompt = BuildFinalAdvicePrompt(
-                query.Text,
-                query.Category + "-" + query.PetType,
-                analysisJson.Intent,
-                analysisJson.HealthAnalysis,
-                productJson
-            );
-
+            var finalPrompt = BuildFinalAdvicePrompt(query.Text, query.Category + "-" + query.PetType, analysisJson.Intent, analysisJson.HealthAnalysis, productJson);
             return await AskAsync(finalPrompt);
-        }
-
-        public Task<string> AskAsync(ChatQuery query)
-        {
-            throw new NotImplementedException();
         }
     }
 }
