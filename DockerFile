@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy csproj(s) first for cache (optional, if single project you can keep simple)
+# copy solution and project first for better cache
 COPY *.sln ./
 COPY qlthucung/*.csproj ./qlthucung/
 RUN dotnet restore
@@ -11,10 +11,10 @@ COPY . .
 RUN dotnet publish qlthucung -c Release -o /app
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# If you prefer file mount method, keep this (code currently uses GOOGLE_CREDENTIALS_JSON, see below)
+# If you mount credentials.json at runtime keep this; otherwise code expects GOOGLE_CREDENTIALS_JSON env.
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 
 COPY --from=build /app ./
