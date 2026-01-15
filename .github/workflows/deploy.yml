@@ -30,11 +30,10 @@ jobs:
 
       - name: 🔨 Build & Push Docker image
         run: |
-          # Build using the project's Dockerfile at qlthucung/Dockerfile
-          docker build -f qlthucung/Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/qlthucung:latest .
+          # Build using the repository root Dockerfile
+          docker build -f Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/qlthucung:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/qlthucung:latest
 
-      # Optional: you can run a container for a smoke test (inject secret at runtime)
       - name: 🔎 Optional smoke test (do not store creds in image)
         if: false
         env:
@@ -45,5 +44,4 @@ jobs:
             -p 8080:80 \
             --name qlthucung_test \
             ${{ secrets.DOCKER_USERNAME }}/qlthucung:latest
-          # curl -I http://localhost:8080/ || true
           docker stop qlthucung_test || true
