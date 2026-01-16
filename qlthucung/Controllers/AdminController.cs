@@ -349,20 +349,8 @@ namespace qlthucung.Controllers
 
         private SheetsService GetSheetsService()
         {
-            var json = Environment.GetEnvironmentVariable("GOOGLE_CREDENTIALS_JSON");
-
-            if (string.IsNullOrEmpty(json))
-            {
-                throw new Exception("GOOGLE_CREDENTIALS_JSON is missing");
-            }
-
-            using var stream = new MemoryStream(
-                System.Text.Encoding.UTF8.GetBytes(json));
-
-            var credential = GoogleCredential
-                .FromStream(stream)
+            var credential = GoogleCredential.FromFile("credentials.json")
                 .CreateScoped(SheetsService.Scope.Spreadsheets);
-
             return new SheetsService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = credential,
@@ -384,19 +372,10 @@ namespace qlthucung.Controllers
         public IActionResult ExcelManage()
         {
             var sanPhams = _context.SanPhams.ToList();
-            var json = Environment.GetEnvironmentVariable("GOOGLE_CREDENTIALS_JSON");
 
-            if (string.IsNullOrEmpty(json))
-            {
-                throw new Exception("GOOGLE_CREDENTIALS_JSON is missing");
-            }
-
-            using var stream = new MemoryStream(
-                System.Text.Encoding.UTF8.GetBytes(json));
-
-            var credential = GoogleCredential
-                .FromStream(stream)
-                .CreateScoped(SheetsService.Scope.Spreadsheets);
+            string spreadsheetId = "1EHUAnDAHI6iXnvj4YPrYPh6vZUkRdQnR1bU_aG2t08s";
+            var credential = GoogleCredential.FromFile("credentials.json")
+                            .CreateScoped(SheetsService.Scope.Spreadsheets);
 
             var service = new SheetsService(new BaseClientService.Initializer()
             {
