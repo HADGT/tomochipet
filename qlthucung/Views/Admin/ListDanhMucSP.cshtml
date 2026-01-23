@@ -53,8 +53,11 @@
                     <td>@item.Tendanhmuc</td>
                     <td>@item.ParentID</td>
                     <td>
-                        <a asp-action="Edit" asp-route-id="@item.IdDanhmuc" class="text-primary f2"><i class="fas fa-edit"></i></a>
-                        <a asp-action="Delete" asp-route-id="@item.IdDanhmuc" class="text-primary f2"><i class="fa-solid fa-trash-can"></i></a>
+                        <a href="javascript:void(0);"
+                           onclick="confirmDelete('@item.IdDanhmuc')"
+                           class="text-primary f2">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </a>
                     </td>
                 </tr>
             }
@@ -91,4 +94,24 @@
     </ul>
 </div>
 
+<script>
+        function confirmDelete(id) {
+        if (confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) {
+            // Sử dụng Fetch API để gửi yêu cầu Delete
+            fetch(`/Admin/DeleteDm/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() // Chống CSRF
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload(); // Tải lại trang nếu xóa thành công
+                } else {
+                    alert("Có lỗi xảy ra khi xóa!");
+                }
+            });
+        }
+    }
+</script>
 

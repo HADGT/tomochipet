@@ -53,6 +53,7 @@ namespace qlthucung.Controllers
             ViewBag.ThongKeSL = ThongKeSL();
             ViewBag.ThongKeDonHang = ThongKeDonHang();
             ViewBag.ThongKeKH = ThongKeKhachHang();
+            ViewBag.SanPham = ThongKeTongSP();
             ViewBag.TongDoanhThu = _context.ChiTietDonHangs
                 .Where(m => m.Status == 1)
                 .Sum(
@@ -311,6 +312,12 @@ namespace qlthucung.Controllers
             return TongDoanhThu;
         }
 
+        public double ThongKeTongSP()
+        {
+            double TongSP = _context.SanPhams.Count();
+            return TongSP;
+        }
+
         public double ThongKeDonHang()
         {
             double slddh = _context.DonHangs.Count();
@@ -562,6 +569,28 @@ namespace qlthucung.Controllers
             ViewData["IdDanhmuc"] = new SelectList(_context.DanhMucs, "IdDanhmuc", "IdDanhmuc", sanPham.IdDanhmuc);
             ViewData["Idthuvien"] = new SelectList(_context.ThuVienAnhs, "Idthuvien", "Idthuvien", sanPham.Idthuvien);
             return View(sanPham);
+        }
+
+        [HttpDelete]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDm(int id)
+        {
+            var dm = await _context.DanhMucs.FindAsync(id);
+            if (dm == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                _context.DanhMucs.Remove(dm);
+                await _context.SaveChangesAsync();
+                return Ok();
+            }
+            catch (Exception)
+            {
+                return BadRequest();
+            }
         }
 
         // GET: Admin/Delete/5

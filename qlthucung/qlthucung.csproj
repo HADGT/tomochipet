@@ -12,6 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Content Remove="Views\Admin\DetailsGD - Copy.cshtml" />
 		<Content Remove="Views\Staff\Dichvu.cshtml" />
 		<Content Remove="Views\Staff\Edit.cshtml" />
 	</ItemGroup>
@@ -52,7 +53,7 @@
 		<None Include="Views\Admin\CreateDm.cshtml" />
 		<None Include="Views\Admin\Delete.cshtml" />
 		<None Include="Views\Admin\Details.cshtml" />
-		<None Include="Views\Admin\DetailsGD.cshtml" />
+		<None Include="Views\Admin\DetailsGD - Copy.cshtml" />
 		<None Include="Views\Admin\Dichvu.cshtml" />
 		<None Include="Views\Admin\Edit.cshtml" />
 		<None Include="Views\Admin\Editkh.cshtml" />

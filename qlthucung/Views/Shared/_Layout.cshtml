@@ -310,6 +310,7 @@
             const chatFooter = $("#chat-footer");
 
             let category = "";
+            let categoryOptions = [];
             let petType = "";
 
             function scrollToBottom() {
@@ -320,6 +321,7 @@
             axios.get('PetAI/StartChat')
                 .then(res => {
                     addMessage('ai', res.data.message);
+                    categoryOptions = res.data.options;
                     showCategoryButtons(res.data.options);
                 })
                 .catch(err => console.error(err));
@@ -405,6 +407,10 @@
                         console.log("res: ", res);
                         const data = res.data.ai;
                         addMessage("ai", data);
+                        setTimeout(() => {
+                            addMessage('ai', 'Bạn muốn tiếp tục tư vấn nội dung nào?');
+                            showCategoryButtons(categoryOptions);
+                        }, 300);
                     })
                     .catch(err => console.error(err));
             }

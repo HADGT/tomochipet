@@ -427,7 +427,7 @@ namespace qlthucung.Services.chat
         {
             string apiKey = _apiKey;
             string url =
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key="
                 + apiKey;
 
             using var http = new HttpClient();
@@ -516,7 +516,7 @@ namespace qlthucung.Services.chat
                 if (query != null && !string.IsNullOrWhiteSpace(query))
                 {
                     string apiKey = _apiKey;
-                    string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+                    string url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + apiKey;
                     using (var http = new HttpClient())
                     {
                         var requestBody = new
@@ -645,59 +645,44 @@ namespace qlthucung.Services.chat
             };
         }
 
-        string BuildIntentPrompt(string query, string pettype)
+        string BuildIntentPrompt(string query, string Category, string pettype)
         {
             return $@"
                 You are a Pet Care AI assistant.
                 You MUST respond in Vietnamese.
 
-                Return EXACTLY one JSON object and NOTHING ELSE (no markdown, no commentary, no code fences).
+                Task: Classify the user's intent based on the provided Input Variables.
 
-                JSON SCHEMA (use these exact property names & casing):
-                {{
-                  ""Intent"": ""product | service | health | other"",
-                  ""SearchTerms"": [],
-                  ""HealthAnalysis"": null | {{
-                      ""Symptoms"": [],
-                      ""Measures"": [],
-                      ""NeededProducts"": [],
-                      ""NeededServices"": []
-                  }}
-                }}
+                INTENTS (Strict Priority):
+                1. """"health"""": Use this if UserQuery mentions diseases, symptoms, injuries, or treatment.
+                2. """"product"""": Use this if Category is 'product' OR UserQuery is about buying pet supplies.
+                3. """"service"""": Use this if Category is 'care' OR UserQuery is about grooming, spa, hotel, or training.
+                4. """"other"""": Use this ONLY if the query does not fit any of the above.
 
                 RULES:
-                - If Intent != ""health"" then HealthAnalysis MUST be null.
-                - SearchTerms must be an array of short keyword strings (no sentences).
-                - Do NOT include additional fields.
-                - Use plain JSON only. Do NOT add explanation or text outside the JSON object.
+                - If Category is 'care' and no health issues are mentioned, Intent MUST be """"service"""".
+                - If Category is 'product', Intent MUST be """"product"""".
+                - If Intent is not """"health"""", HealthAnalysis MUST be null.
+                - SearchTerms: short keywords for searching our database.
+                - Return ONLY a JSON object.
 
-                INPUT:
-                - PetType: {pettype}
-                - UserQuery: {query}
+                INPUT DATA:
+                - PetType: {{pettype}}
+                - Category: {{Category}}
+                - UserQuery: {{query}}
 
-                EXAMPLES (showing exact JSON objects only):
-
-                Product example:
-                {{
-                  ""Intent"": ""product"",
-                  ""SearchTerms"": [""chó phốc"", ""sản phẩm""],
-                  ""HealthAnalysis"": null
-                }}
-
-                Health example:
-                {{
-                  ""Intent"": ""health"",
-                  ""SearchTerms"": [""sốt"", ""nôn""],
-                  ""HealthAnalysis"": {{
-                      ""Symptoms"": [""sốt"", ""nôn""],
-                      ""Measures"": [""cho uống nước"", ""theo dõi nhiệt độ""],
-                      ""NeededProducts"": [""thuốc hạ sốt""],
-                      ""NeededServices"": [""khám thú y""]
-                  }}
-                }}
-
-                Now generate the single JSON object that matches the schema above for the provided input. Output only the JSON object."
-             ;
+                OUTPUT JSON STRUCTURE:
+                {{{{
+                    """"Intent"""": """"product | service | health | other"""",
+                    """"SearchTerms"""": [],
+                    """"HealthAnalysis"""": null | {{{{
+                        """"Symptoms"""": [],
+                        """"Measures"""": [],
+                        """"NeededProducts"""": [],
+                        """"NeededServices"""": []
+                    }}}}
+                }}}}
+            ";
         }
 
         private string BuildFinalAdvicePrompt(
@@ -774,7 +759,7 @@ namespace qlthucung.Services.chat
             /* =========================
              * 1. GỌI AI PHÂN TÍCH INTENT
              * ========================= */
-            string analysisPrompt = BuildIntentPrompt(query.Text, query.Category + "-" + query.PetType);
+            string analysisPrompt = BuildIntentPrompt(query.Text, query.Category, query.PetType);
 
             IntentResult analysisJson = await CallAIAsync(analysisPrompt);
 
@@ -790,7 +775,7 @@ namespace qlthucung.Services.chat
                 var hybridQuery = await EncodeHybridQueryAsync(query.Text ?? "", query.PetType, analysisJson.SearchTerms ?? new List<string>());
                 products = await GetProducts(hybridQuery, query.PetType);
             }
-            else if (analysisJson.Intent == "service")
+            else if (analysisJson.Intent == "other" || analysisJson.Intent == "service")
             {
                 var hybridQuery = await EncodeHybridQueryAsync(query.Text ?? "", query.PetType, analysisJson.SearchTerms ?? new List<string>());
                 products = await GetProductsForHealth(hybridQuery);

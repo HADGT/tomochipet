@@ -121,7 +121,7 @@ namespace qlthucung.Controllers
 
             // Gửi email
             var users = _context.AspNetUsers.FirstOrDefault(p => p.UserName == khachHangName);
-            if (user != null && !string.IsNullOrEmpty(user.Email))
+            if (user != null && !string.IsNullOrEmpty(model.Email))
             {
                 string subject = "Thông báo đặt lịch dịch vụ thành công";
                 string body = $@"
@@ -131,7 +131,7 @@ namespace qlthucung.Controllers
             <p>Trạng thái: {model.Trangthai}</p>
             <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!</p>";
 
-                await _emailSender.SendEmailAsync(user.Email, subject, body);
+                await _emailSender.SendEmailAsync(model.Email, subject, body);
             }
 
             TempData["Success"] = "Đặt lịch thành công! Vui lòng kiểm tra email để xác nhận.";
