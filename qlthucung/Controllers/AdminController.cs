@@ -119,8 +119,8 @@ namespace qlthucung.Controllers
                 if (sp.Masp.ToString() != row[0].ToString() ||
                     sp.Tensp != row[1].ToString() ||
                     sp.Giaban.ToString() != row[2].ToString() ||
-                    sp.Giamgia.ToString() != row[5].ToString() ||
-                    sp.Giakhuyenmai.ToString() != row[6].ToString())
+                    sp.Giamgia.ToString() != row[4].ToString() ||
+                    sp.Giakhuyenmai.ToString() != row[5].ToString())
                 {
                     isDifferent = true;
                     break;
@@ -167,9 +167,8 @@ namespace qlthucung.Controllers
                         sp.Giaban = giaban;
                     if (int.TryParse(row[3]?.ToString(), out var sl))
                         sp.Soluongton = sp.Soluongton + sl;
-                    sp.Mota = row.Count > 4 ? row[4].ToString() : "";
                     // Giảm giá
-                    if (int.TryParse(CleanNumber(row[5]?.ToString()), out var giamgia))
+                    if (int.TryParse(CleanNumber(row[4]?.ToString()), out var giamgia))
                         sp.Giamgia = giamgia;
                     sp.Giakhuyenmai = sp.Giaban - (sp.Giaban * sp.Giamgia / 100);
                     sp.Ngaycapnhat = DateTime.Now;
